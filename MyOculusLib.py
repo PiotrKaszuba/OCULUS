@@ -5,7 +5,7 @@ import copy
 import os
 import shutil
 ####### <   Globals >
-
+masks_done =0
 patient_inds = 0
 patient_date = 0
 eye = 'left'
@@ -470,11 +470,12 @@ def string_patients(path):
 
 
 def mask_on_path(path):
-    global accepted,winname
+    global accepted,winname,masks_done
     if not os.path.exists(path+'/mask'):
         os.makedirs(path+'/mask')
     for i in range( len(os.listdir(path))-1):
         if os.path.exists(path+'/mask/'+str(i)+'.jpg'):
+            masks_done+=1
             continue
         img = read_and_size(str(i), path=path)
 
@@ -495,6 +496,8 @@ def mask_on_path(path):
             show(im2)
 
         cv2.imwrite(path+'/mask/'+str(i)+'.jpg', mask)
+        masks_done+=1
+        print("masks: "+str(masks_done))
         cv2.destroyWindow('a')
         cv2.destroyWindow('mask')
 
