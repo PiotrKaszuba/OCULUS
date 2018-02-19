@@ -6,6 +6,7 @@ import os
 import shutil
 ####### <   Globals >
 masks_done =0
+patients_done=0
 patient_inds = 0
 patient_date = 0
 eye = 'left'
@@ -135,6 +136,7 @@ def print_info(im):
 
 
 def all_path(func,start_path=None, eye=None):
+    global patients_done
     if eye != 'left' and eye != 'right':
         eye='both'
 
@@ -155,7 +157,8 @@ def all_path(func,start_path=None, eye=None):
             if eye == 'both':
                 func(start_path+patient[i]+'/'+date[j]+'/'+'left_eye_images/')
                 func(start_path + patient[i] + '/' + date[j] + '/' + 'right_eye_images/')
-
+        patients_done+=1
+        print("patients: " +str(patients_done))
 def random_path(start_path=None, eye = None):
     if eye != 'left' and eye != 'right':
         if np.random.randint(0,2) ==0:
