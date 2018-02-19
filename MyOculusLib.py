@@ -473,7 +473,7 @@ def mask_on_path(path):
     global accepted,winname
     if not os.path.exists(path+'/mask'):
         os.makedirs(path+'/mask')
-    for i in range( len(os.listdir(path))):
+    for i in range( len(os.listdir(path))-1):
         if os.path.exists(path+'/mask/'+str(i)+'.jpg'):
             continue
         img = read_and_size(str(i), path=path)
