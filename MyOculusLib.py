@@ -168,12 +168,11 @@ def random_path(start_path=None, eye = None):
 
 
     patient = None
-
+    global image_path
     if start_path==None:
-        patient = os.listdir()
-        start_path=''
-    else:
-        patient = os.listdir(start_path)
+        start_path=image_path
+
+    patient = os.listdir(start_path)
 
 
     patient_path = patient[np.random.randint(0,len(patient))]

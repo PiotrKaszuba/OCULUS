@@ -2,7 +2,7 @@ from keras.preprocessing.image import ImageDataGenerator, array_to_img, img_to_a
 import numpy as np 
 import os
 import glob
-#import cv2
+import cv2
 #from libtiff import TIFF
 
 class myAugmentation(object):
@@ -52,7 +52,7 @@ class myAugmentation(object):
 		imgtype = self.img_type
 		path_aug_merge = self.aug_merge_path
 		if len(trains) != len(labels) or len(trains) == 0 or len(trains) == 0:
-			print "trains can't match labels"
+			print ("trains can't match labels")
 			return 0
 		for i in range(len(trains)):
 			img_t = load_img(path_train+"/"+str(i)+"."+imgtype)
@@ -81,7 +81,8 @@ class myAugmentation(object):
                           batch_size=batch_size,
                           save_to_dir=save_to_dir,
                           save_prefix=save_prefix,
-                          save_format=save_format):
+                          save_format=save_format,
+								  ):
 		    i += 1
 		    if i > imgnum:
 		        break
