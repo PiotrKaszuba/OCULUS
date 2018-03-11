@@ -1,11 +1,22 @@
-import Unet.data as dt
+import DataAugmentationClasses as dac
 import MyOculusLib as mol
 
 mol.init()
-img = mol.read_and_size("0", mol.random_path())
-x = dt.myAugmentation()
-img = img.reshape(img.shape +(1,1,))
-x.doAugmentate(img, save_to_dir="Images/augmentate",save_prefix="aug",save_format="jpg", batch_size=20)
+x = dac.ImageDataGeneratorExtension(rotation_range=0.2,
+							        width_shift_range=0.05,
+							        height_shift_range=0.05,
+							        shear_range=0.05,
+							        zoom_range=0.05,
+							        horizontal_flip=True,
+							        fill_mode='nearest')
+
+i = 0
+#directory = mol.random_path()
+#mol.mask_on_path(directory)
+for batch in x.flow_from_directory_extension(directory="Images/all/", color_mode="grayscale", save_to_dir="Images/augmentate/", class_mode='mask'):
+    i+=1
+    if i>=3:
+        break
 
 
 

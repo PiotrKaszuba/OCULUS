@@ -1,16 +1,79 @@
-import keras.preprocessing.image as i
+import keras.preprocessing.image as image
 from keras import backend as K
 import numpy as np
 import warnings
 import os
 
 
+def _count_valid_files_in_directory_extension(directory, white_list_formats, follow_links):
+    """Count files with extension in `white_list_formats` contained in a directory.
+
+    # Arguments
+        directory: absolute path to the directory containing files to be counted
+        white_list_formats: set of strings containing allowed extensions for
+            the files to be counted.
+
+    # Returns
+        the count of files with extension in `white_list_formats` contained in
+        the directory.
+    """
+    def _recursive_list(subpath):
+        return sorted(os.walk(subpath, followlinks=follow_links), key=lambda tpl: tpl[0])
+
+    samples = 0
+    for root, _, files in _recursive_list(directory):
+        for fname in files:
+            is_valid = False
+            for extension in white_list_formats:
+                if fname.lower().endswith('.' + extension) and "registration" not in root  and "mask" not in root and os.path.isfile(root+"\\mask\\"+fname):
+                    is_valid = True
+                    break
+            if is_valid:
+                samples += 1
+    return samples
+
+
+def _list_valid_filenames_in_directory_extension(directory, white_list_formats,
+                                       class_indices, follow_links):
+    """List paths of files in `subdir` relative from `directory` whose extensions are in `white_list_formats`.
+
+    # Arguments
+        directory: absolute path to a directory containing the files to list.
+            The directory name is used as class label and must be a key of `class_indices`.
+        white_list_formats: set of strings containing allowed extensions for
+            the files to be counted.
+        class_indices: dictionary mapping a class name to its index.
+
+    # Returns
+        classes: a list of class indices
+        filenames: the path of valid files in `directory`, relative from
+            `directory`'s parent (e.g., if `directory` is "dataset/class1",
+            the filenames will be ["class1/file1.jpg", "class1/file2.jpg", ...]).
+    """
+    def _recursive_list(subpath):
+        return sorted(os.walk(subpath, followlinks=follow_links), key=lambda tpl: tpl[0])
+
+    classes = []
+    filenames = []
+    subdir = os.path.basename(directory)
+    basedir = os.path.dirname(directory)
+    for root, _, files in _recursive_list(directory):
+        for fname in files:
+            is_valid = False
+            for extension in white_list_formats:
+                if fname.lower().endswith('.' + extension) and "registration" not in root  and "mask" not in root and os.path.isfile(root+"\\mask\\"+fname):
+                    is_valid = True
+                    break
+            if is_valid:
+                classes.append(class_indices[subdir])
+                # add filename relative to directory
+                absolute_path = os.path.join(root, fname)
+                filenames.append(os.path.relpath(absolute_path, basedir))
+    return classes, filenames
 
 
 
-
-
-class ImageDataGeneratorExtension(i.ImageDataGenerator):
+class ImageDataGeneratorExtension(image.ImageDataGenerator):
     def __init__(self,
                  featurewise_center=False,
                  samplewise_center=False,
@@ -32,28 +95,48 @@ class ImageDataGeneratorExtension(i.ImageDataGenerator):
                  preprocessing_function=None,
                  data_format=None):
 
-        super.__init__(self,
-                 featurewise_center=False,
-                 samplewise_center=False,
-                 featurewise_std_normalization=False,
-                 samplewise_std_normalization=False,
-                 zca_whitening=False,
-                 zca_epsilon=1e-6,
-                 rotation_range=0.,
-                 width_shift_range=0.,
-                 height_shift_range=0.,
-                 shear_range=0.,
-                 zoom_range=0.,
-                 channel_shift_range=0.,
-                 fill_mode='nearest',
-                 cval=0.,
-                 horizontal_flip=False,
-                 vertical_flip=False,
-                 rescale=None,
-                 preprocessing_function=None,
-                 data_format=None)
+        super(ImageDataGeneratorExtension,self).__init__(
+                 featurewise_center=featurewise_center,
+                 samplewise_center=samplewise_center,
+                 featurewise_std_normalization=featurewise_std_normalization,
+                 samplewise_std_normalization=samplewise_std_normalization,
+                 zca_whitening=zca_whitening,
+                 zca_epsilon=zca_epsilon,
+                 rotation_range=rotation_range,
+                 width_shift_range=width_shift_range,
+                 height_shift_range=height_shift_range,
+                 shear_range=shear_range,
+                 zoom_range=zoom_range,
+                 channel_shift_range=channel_shift_range,
+                 fill_mode=fill_mode,
+                 cval=cval,
+                 horizontal_flip=horizontal_flip,
+                 vertical_flip=vertical_flip,
+                 rescale=rescale,
+                 preprocessing_function=preprocessing_function,
+                 data_format=data_format)
 
-        def flow(self, x, y=None, batch_size=32, shuffle=True, seed=None,
+    def flow_from_directory_extension(self, directory,
+                                target_size=(256, 256), color_mode='rgb',
+                                classes=None, class_mode='categorical',
+                                batch_size=32, shuffle=True, seed=None,
+                                save_to_dir=None,
+                                save_prefix='',
+                                save_format='png',
+                                follow_links=False):
+            return DirectoryIteratorExtension(
+                directory, self,
+                target_size=target_size, color_mode=color_mode,
+                classes=classes, class_mode=class_mode,
+                data_format=self.data_format,
+                batch_size=batch_size, shuffle=shuffle, seed=seed,
+                save_to_dir=save_to_dir,
+                save_prefix=save_prefix,
+                save_format=save_format,
+                follow_links=follow_links)
+
+
+    def flow(self, x, y=None, batch_size=32, shuffle=True, seed=None,
                  save_to_dir=None, save_prefix='', save_format='png'):
             return NumpyArrayIteratorExtension(
                 x, y, self,
@@ -65,7 +148,7 @@ class ImageDataGeneratorExtension(i.ImageDataGenerator):
                 save_prefix=save_prefix,
                 save_format=save_format)
 
-        def random_transform(self, x, y, seed=None):
+    def random_transform_extension(self, x, y, seed=None):
             """Randomly augment a single image tensor.
 
             # Arguments
@@ -138,32 +221,192 @@ class ImageDataGeneratorExtension(i.ImageDataGenerator):
             if transform_matrix is not None:
                 hx, wx = x.shape[img_row_axis], x.shape[img_col_axis]
                 hy, wy = y.shape[img_row_axis], y.shape[img_col_axis]
-                transform_matrix_x = i.transform_matrix_offset_center(transform_matrix, hx, wx)
-                transform_matrix_y = i.transform_matrix_offset_center(transform_matrix, hy, wy)
-                x = i.apply_transform(x, transform_matrix_x, img_channel_axis,
+                transform_matrix_x = image.transform_matrix_offset_center(transform_matrix, hx, wx)
+                transform_matrix_y = image.transform_matrix_offset_center(transform_matrix, hy, wy)
+                x = image.apply_transform(x, transform_matrix_x, img_channel_axis,
                                     fill_mode=self.fill_mode, cval=self.cval)
 
-                y = i.apply_transform(y, transform_matrix_y, img_channel_axis,
+                y = image.apply_transform(y, transform_matrix_y, img_channel_axis,
                                       fill_mode=self.fill_mode, cval=self.cval)
 
             if self.channel_shift_range != 0:
-                x = i.random_channel_shift(x,
+                x = image.random_channel_shift(x,
                                          self.channel_shift_range,
                                          img_channel_axis)
 
             if self.horizontal_flip:
                 if np.random.random() < 0.5:
-                    x = i.flip_axis(x, img_col_axis)
-                    y= i.flip_axis(y, img_col_axis)
+                    x = image.flip_axis(x, img_col_axis)
+                    y= image.flip_axis(y, img_col_axis)
 
             if self.vertical_flip:
                 if np.random.random() < 0.5:
-                    x = i.flip_axis(x, img_row_axis)
-                    y = i.flip_axis(y, img_row_axis)
+                    x = image.flip_axis(x, img_row_axis)
+                    y = image.flip_axis(y, img_row_axis)
             return x, y
+class DirectoryIteratorExtension(image.Iterator):
+
+    def __init__(self, directory, image_data_generator,
+                 target_size=(256, 256), color_mode='rgb',
+                 classes=None, class_mode='categorical',
+                 batch_size=32, shuffle=True, seed=None,
+                 data_format=None,
+                 save_to_dir=None, save_prefix='', save_format='png',
+                 follow_links=False):
+        if data_format is None:
+            data_format = K.image_data_format()
+        self.directory = directory
+        self.image_data_generator = image_data_generator
+        self.target_size = tuple(target_size)
+        if color_mode not in {'rgb', 'grayscale'}:
+            raise ValueError('Invalid color mode:', color_mode,
+                             '; expected "rgb" or "grayscale".')
+        self.color_mode = color_mode
+        self.data_format = data_format
+        if self.color_mode == 'rgb':
+            if self.data_format == 'channels_last':
+                self.image_shape = self.target_size + (3,)
+            else:
+                self.image_shape = (3,) + self.target_size
+        else:
+            if self.data_format == 'channels_last':
+                self.image_shape = self.target_size + (1,)
+            else:
+                self.image_shape = (1,) + self.target_size
+        self.classes = classes
+        if class_mode not in {'categorical', 'binary', 'sparse',
+                              'input', 'mask', None}:
+            raise ValueError('Invalid class_mode:', class_mode,
+                             '; expected one of "categorical", '
+                             '"binary", "sparse", "input", "mask", '
+                             ' or None.')
+        self.class_mode = class_mode
+        self.save_to_dir = save_to_dir
+        self.save_prefix = save_prefix
+        self.save_format = save_format
+
+        white_list_formats = {'png', 'jpg', 'jpeg', 'bmp', 'ppm'}
+
+        # first, count the number of samples and classes
+        self.samples = 0
+
+        if not classes:
+            classes = []
+            for subdir in sorted(os.listdir(directory)):
+                if os.path.isdir(os.path.join(directory, subdir)):
+                    classes.append(subdir)
+        self.num_class = len(classes)
+        self.class_indices = dict(zip(classes, range(len(classes))))
+
+        pool = image.multiprocessing.pool.ThreadPool()
+        function_partial = image.partial(_count_valid_files_in_directory_extension,
+                                   white_list_formats=white_list_formats,
+                                   follow_links=follow_links)
+        self.samples = sum(pool.map(function_partial,
+                                    (os.path.join(directory, subdir)
+                                     for subdir in classes)))
+
+        print('Found %d images belonging to %d classes.' % (self.samples, self.num_class))
+
+        # second, build an index of the images in the different class subfolders
+        results = []
+
+        self.filenames = []
+        self.classes = np.zeros((self.samples,), dtype='int32')
+        i = 0
+        for dirpath in (os.path.join(directory, subdir) for subdir in classes):
+            results.append(pool.apply_async(_list_valid_filenames_in_directory_extension,
+                                            (dirpath, white_list_formats,
+                                             self.class_indices, follow_links)))
+        for res in results:
+            classes, filenames = res.get()
+            self.classes[i:i + len(classes)] = classes
+            self.filenames += filenames
+            i += len(classes)
+        pool.close()
+        pool.join()
+
+        self.class_mode = class_mode
+
+        super(DirectoryIteratorExtension, self).__init__(self.samples, batch_size, shuffle, seed)
+
+    def next(self):
+        """For python 2.x.
+
+        # Returns
+            The next batch.
+        """
+        with self.lock:
+            index_array, current_index, current_batch_size = next(self.index_generator)
+        # The transformation of images is not under thread lock
+        # so it can be done in parallel
+        batch_x = np.zeros((current_batch_size,) + self.image_shape, dtype=K.floatx())
+        if self.class_mode == 'mask':
+            batch_y = np.zeros((current_batch_size,) + self.image_shape, dtype=K.floatx())
+        grayscale = self.color_mode == 'grayscale'
+        # build batch of image data
+        for i, j in enumerate(index_array):
+            fname = self.filenames[j]
+            img = image.load_img(os.path.join(self.directory, fname),
+                           grayscale=grayscale,
+                           target_size=self.target_size)
+            x = image.img_to_array(img, data_format=self.data_format)
+
+            if self.class_mode == 'mask':
+                words = fname.split("\\")
+                words.insert(-1,"mask")
+                fname= "\\".join(words)
+                img2 = image.load_img(os.path.join(self.directory, fname),
+                           grayscale=grayscale,
+                           target_size=self.target_size)
+                y = image.img_to_array(img2, data_format=self.data_format)
+                x, y = self.image_data_generator.random_transform_extension(x, y)
+                y = self.image_data_generator.standardize(y)
+                batch_y[i] = y
+            else:
+                x = self.image_data_generator.random_transform(x)
+            x = self.image_data_generator.standardize(x)
+            batch_x[i] = x
+        # optionally save augmented images to disk for debugging purposes
+        if self.save_to_dir:
+            for i in range(current_batch_size):
+                hash = np.random.randint(1e4)
+                img = image.array_to_img(batch_x[i], self.data_format, scale=True)
+
+                fname = '{prefix}_{index}_{hash}.{format}'.format(prefix=self.save_prefix,
+                                                                  index=current_index + i,
+                                                                  hash=hash,
+                                                                  format=self.save_format)
+                img.save(os.path.join(self.save_to_dir, fname))
+
+                if self.class_mode == 'mask':
+                    img2 = image.array_to_img(batch_y[i], self.data_format, scale=True)
+
+                    fname = '{prefix}_{index}_{hash}.{format}'.format(prefix=self.save_prefix,
+                                                                  index=current_index + i,
+                                                                  hash=hash,
+                                                                  format=self.save_format)
+                    img2.save(os.path.join(self.save_to_dir + "mask/", fname))
 
 
-class NumpyArrayIteratorExtension(i.Iterator):
+        # build batch of labels
+        if self.class_mode == 'input':
+            batch_y = batch_x.copy()
+        elif self.class_mode == 'sparse':
+            batch_y = self.classes[index_array]
+        elif self.class_mode == 'binary':
+            batch_y = self.classes[index_array].astype(K.floatx())
+        elif self.class_mode == 'categorical':
+            batch_y = np.zeros((len(batch_x), self.num_class), dtype=K.floatx())
+            for i, label in enumerate(self.classes[index_array]):
+                batch_y[i, label] = 1.
+        elif self.class_mode == 'mask':
+            pass
+        else:
+            return batch_x
+        return batch_x, batch_y
+
+class NumpyArrayIteratorExtension(image.NumpyArrayIterator):
     """Iterator yielding data from a Numpy array.
 
     # Arguments
@@ -189,39 +432,7 @@ class NumpyArrayIteratorExtension(i.Iterator):
                  batch_size=32, shuffle=False, seed=None,
                  data_format=None,
                  save_to_dir=None, save_prefix='', save_format='png'):
-        if y is not None and len(x) != len(y):
-            raise ValueError('X (images tensor) and y (labels) '
-                             'should have the same length. '
-                             'Found: X.shape = %s, y.shape = %s' %
-                             (np.asarray(x).shape, np.asarray(y).shape))
-
-        if data_format is None:
-            data_format = K.image_data_format()
-        self.x = np.asarray(x, dtype=K.floatx())
-
-        if self.x.ndim != 4:
-            raise ValueError('Input data in `NumpyArrayIterator` '
-                             'should have rank 4. You passed an array '
-                             'with shape', self.x.shape)
-        channels_axis = 3 if data_format == 'channels_last' else 1
-        if self.x.shape[channels_axis] not in {1, 3, 4}:
-            warnings.warn('NumpyArrayIterator is set to use the '
-                          'data format convention "' + data_format + '" '
-                          '(channels on axis ' + str(channels_axis) + '), i.e. expected '
-                          'either 1, 3 or 4 channels on axis ' + str(channels_axis) + '. '
-                          'However, it was passed an array with shape ' + str(self.x.shape) +
-                          ' (' + str(self.x.shape[channels_axis]) + ' channels).')
-        if y is not None:
-            self.y = np.asarray(y)
-        else:
-            self.y = None
-        self.image_data_generator = image_data_generator
-        self.data_format = data_format
-        self.save_to_dir = save_to_dir
-        self.save_prefix = save_prefix
-        self.save_format = save_format
-        super(NumpyArrayIteratorExtension, self).__init__(x.shape[0], batch_size, shuffle, seed)
-
+        super.__init__(x,y,image_data_generator,batch_size,shuffle,seed,data_format,save_to_dir,save_prefix,save_format)
     def next(self):
         """For python 2.x.
 
@@ -239,22 +450,23 @@ class NumpyArrayIteratorExtension(i.Iterator):
         for i, j in enumerate(index_array):
             x = self.x[j]
             y = self.y[j]
-            x, y = self.image_data_generator.random_transform(x.astype(K.floatx()), y.astype(K.floatx()))
+            x, y = self.image_data_generator.random_transform_extension(x.astype(K.floatx()), y.astype(K.floatx()))
             x = self.image_data_generator.standardize(x)
             y = self.image_data_generator.standardize(y)
             batch_x[i] = x
             batch_y[i] = y
         if self.save_to_dir:
             for i in range(current_batch_size):
-                img = i.array_to_img(batch_x[i], self.data_format, scale=True)
-                img2 = i.array_to_img(batch_y[i], self.data_format, scale=True)
+                hash = np.random.randint(1e4)
+                img = image.array_to_img(batch_x[i], self.data_format, scale=True)
+                img2 = image.array_to_img(batch_y[i], self.data_format, scale=True)
                 fname = '{prefix}_{index}_{hash}.{format}'.format(prefix=self.save_prefix,
                                                                   index=current_index + i,
-                                                                  hash=np.random.randint(1e4),
+                                                                  hash=hash,
                                                                   format=self.save_format)
                 fname2 = '{prefix}_{index}_{hash}.{format}'.format(prefix=self.save_prefix,
                                                                   index=current_index + i,
-                                                                  hash=np.random.randint(1e4),
+                                                                   hash=hash,
                                                                   format=self.save_format)
                 img.save(os.path.join(self.save_to_dir, fname))
                 img2.save(os.path.join(self.save_to_dir+"masks/", fname))

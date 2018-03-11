@@ -398,7 +398,7 @@ def load_h_w_from_img(img):
     height = h
     width = w
 
-def init(win='win', im_path = 'Images/all/', start_path='Images/all/', mouse_f=measure_size, w=518, h=392):
+def init(win='win', im_path = 'Images/all/', start_path='Images/all/', mouse_f=draw_elipse, w=518, h=392):
     global winname
     global image_path
     global height
