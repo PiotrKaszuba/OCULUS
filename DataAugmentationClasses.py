@@ -340,7 +340,7 @@ class DirectoryIteratorExtension(image.Iterator):
             index_array, current_index, current_batch_size = next(self.index_generator)
         # The transformation of images is not under thread lock
         # so it can be done in parallel
-        batch_x = np.zeros((current_batch_size,) + self.image_shape, dtype=K.floatx())
+        batch_x = np.zeros((current_batch_size,) + self.image_shape, dtype=K.floatx() )
         if self.class_mode == 'mask':
             batch_y = np.zeros((current_batch_size,) + self.image_shape, dtype=K.floatx())
         grayscale = self.color_mode == 'grayscale'
