@@ -1,5 +1,4 @@
-import MyOculusLib as mol
-
+from Code.Libraries import MyOculusLib as mol
 
 path = 'Images/all/'
 path_to_patients = 'Images/patients/'

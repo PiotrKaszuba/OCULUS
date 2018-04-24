@@ -1,9 +1,9 @@
 import cv2
 import numpy as np
-import MyOculusLib as mol
-import os
 
-mol.init(im_path='Images/test/')
+from Code.Libraries import MyOculusLib as mol
+
+mol.init(im_path='../Images/test/')
 
 
 

@@ -13,9 +13,9 @@ def show(im):
 
 cv2.namedWindow("win")
 
-name = "9"
+name = "1"
 
-im = cv2.imread("Images/test/"+name+".jpg",0)
+im = cv2.imread("../../Images/test/"+name+".jpg",0)
 
 im=cv2.resize(im, (0,0), fx=0.2, fy=0.2)
 #show(im)
@@ -28,7 +28,7 @@ im = clahe.apply(im)
 im=cv2.GaussianBlur(im,(5,5),2,0)
 
 show(im)
-im = cv2.Canny(im,150,240)
+im = cv2.Canny(im,100,200)
 
 
 

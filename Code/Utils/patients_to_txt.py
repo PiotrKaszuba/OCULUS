@@ -1,4 +1,4 @@
-import MyOculusLib as mol
+from Code.Libraries import MyOculusLib as mol
 
 path = 'Images/all/'
 string = mol.string_patients(path)

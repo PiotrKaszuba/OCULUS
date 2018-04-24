@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
-
-
+import os
+import Code.Libraries.MyOculusLib as mol
 def LBP(image):
     newimage = np.zeros(image.shape, dtype=np.uint8)
     for i in range(1, image.shape[0] - 1):
@@ -30,20 +30,10 @@ def LBP_Mask(image, i, j):
 def scale(image, size):
     return cv2.resize(image, (size, size), interpolation=cv2.INTER_AREA)
 
+def lbptestOnPath(path):
+        for i in range(len(os.listdir(path)) - 1):
+            img = mol.read_and_size(str(i), path=path)
+            lbp = LBP(img)
+            mol.show(lbp)
 
 
-img = cv2.imread('zad3.png', 0)
-
-img = scale(img, 400)
-img2 = LBP(img, 128)
-
-
-kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
-
-imgMorph = cv2.morphologyEx(img2, cv2.MORPH_OPEN, kernel)
-
-cv2.imshow('Before', img)
-cv2.imshow('After', img2)
-cv2.imshow('Morph', imgMorph)
-
-cv2.waitKey(0)

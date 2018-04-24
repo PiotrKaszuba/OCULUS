@@ -1,6 +1,6 @@
 import cv2
-import numpy as np
-import MyOculusLib as mol
+
+from Code.Libraries import MyOculusLib as mol
 
 depth = 5
 mol.init()

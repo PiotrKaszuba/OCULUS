@@ -4,6 +4,8 @@ import math
 import copy
 import os
 import shutil
+import csv
+from functools import reduce
 ####### <   Globals >
 masks_done =0
 patients_done=0
@@ -19,6 +21,9 @@ height=0
 width=0
 mask = None
 accepted = True
+rr = 0
+xx = 0
+yy = 0
 ###### <    Globals />
 
 
@@ -52,7 +57,7 @@ def circle_kernel(r, v=1 , type=np.uint8):
 def circle_filter_2d(im, r=None):
     h,w = np.shape(im)
     if r==None:
-        r=(int)(h/10)
+        r=(int)(h/8)
     im = cv2.filter2D(im, 5, circle_kernel(r))
     im /= (r ** 2 * 3.14)
     im = cv2.convertScaleAbs(im)
@@ -102,7 +107,7 @@ def square_kernel(r, v=1, type=np.uint8):
 def square_filter_2d(im, r=None):
     h,w = np.shape(im)
     if r==None:
-        r=(int)(h/10)
+        r=(int)(h/8)
     im = cv2.filter2D(im, 5, square_kernel(r))
     im /= (r ** 2 * 4)
     im = cv2.convertScaleAbs(im)
@@ -146,7 +151,7 @@ def all_path(func,start_path=None, eye=None):
 
 
     patient = os.listdir(start_path)
-    for i in range (len(patient)):
+    for i in range (len(a for a in patient if not os.path.isfile(a))):
         date = os.listdir(start_path + patient[i] + "/")
 
         for j in range(len(date)):
@@ -163,7 +168,7 @@ def random_path(start_path=None, eye = None):
     if eye != 'left' and eye != 'right':
         if np.random.randint(0,2) ==0:
             eye='left'
-        if np.random.randint(0,2) ==1:
+        else:
             eye='right'
 
 
@@ -174,8 +179,9 @@ def random_path(start_path=None, eye = None):
 
     patient = os.listdir(start_path)
 
+    leng = len([f for f in patient if not os.path.isfile(os.path.join(start_path, f))])
 
-    patient_path = patient[np.random.randint(0,len(patient))]
+    patient_path = patient[np.random.randint(0,leng)]
 
     date = os.listdir(start_path+patient_path+"/")
 
@@ -188,7 +194,7 @@ def random_path(start_path=None, eye = None):
 
 def get_number_of_images_in_path():
     global image_path
-    return len(os.listdir(image_path))
+    return len(i for i in os.listdir(image_path) if os.path.isfile(i))
 
 
 def modify_h_div_w(img, h_div_w, modify_height=False, not_modified_dim_wanted_val=0):
@@ -208,28 +214,34 @@ def modify_h_div_w(img, h_div_w, modify_height=False, not_modified_dim_wanted_va
     img = cv2.resize(img, (w,h))
     return img
 
-def read_and_size( name, path=None, extension='.jpg', scale=0.2, mode=0, modify_shape=True, h_div_w = 0, modify_height=False, not_modified_wanted_value=0):
+def read_and_size( name, path=None, extension='.jpg', scale=0.2, mode=0, modify_shape=True, h_div_w = 0, modify_height=False, not_modified_wanted_value=0, target_size=None):
     global image_path
     if path == None:
         path = image_path
     im = cv2.imread(path+name+extension, mode)
-    if scale >0 :
-        im = cv2.resize(im, (0,0), fx=scale, fy=scale)
-    if h_div_w>0:
-        im = modify_h_div_w(im,h_div_w,modify_height,not_modified_wanted_value)
+    if target_size ==None:
+        if scale >0 :
+            im = cv2.resize(im, (0,0), fx=scale, fy=scale)
+        if h_div_w>0:
+            im = modify_h_div_w(im,h_div_w,modify_height,not_modified_wanted_value)
+    else:
+        im = cv2.resize(im, target_size)
     if modify_shape:
         load_h_w_from_img(im)
     return im
 
-def read_and_size_with_copy( name, path=None, extension='.jpg', scale=0.2, mode=0, modify_shape=True, h_div_w = 0, modify_height=False, not_modified_wanted_value=0):
+def read_and_size_with_copy( name, path=None, extension='.jpg', scale=0.2, mode=0, modify_shape=True, h_div_w = 0, modify_height=False, not_modified_wanted_value=0, target_size=None):
     global image_path
     if path == None:
         path = image_path
     im = cv2.imread(path+name+extension, mode)
-    if scale > 0:
-        im = cv2.resize(im, (0, 0), fx=scale, fy=scale)
-    if h_div_w > 0:
-        im = modify_h_div_w(im, h_div_w, modify_height, not_modified_wanted_value)
+    if target_size == None:
+        if scale > 0:
+            im = cv2.resize(im, (0, 0), fx=scale, fy=scale)
+        if h_div_w > 0:
+            im = modify_h_div_w(im, h_div_w, modify_height, not_modified_wanted_value)
+    else:
+        im = cv2.resize(im, target_size)
     im_copy = copy.deepcopy(im)
     if modify_shape:
         load_h_w_from_img(im)
@@ -239,7 +251,7 @@ def trackback_callback(x):
     global track_val
     track_val = x
 
-def show(im, function_on_im=None, *args, other_im = [], function_on_other=None, print=True, window=None):
+def show(im, function_on_im=None, *args, other_im = [], function_on_other=None, print=False, window=None):
     global winname
     if window==None:
         window = winname
@@ -300,6 +312,36 @@ def measure_size(event, x, y, flags, param):
     if event == cv2.EVENT_RBUTTONDOWN:
         print('point: ' + str(x) +', ' + str(y))
 
+
+def draw_circle(event, x, y, flags, param):
+    global width, height, mask, rr, xx, yy, accepted
+
+    if event == cv2.EVENT_LBUTTONDOWN:
+        accepted = False
+        xx = x
+        yy = y
+        mask = np.zeros((height,width), dtype=np.uint8)
+        mask =cv2.circle(mask,(xx,yy), rr, 255, -1)
+        cv2.imshow('mask', mask)
+
+    if event == cv2.EVENT_RBUTTONDOWN:
+
+        accepted = False
+        cv2.destroyWindow('a')
+        cv2.destroyWindow('mask')
+
+    if event == 10:
+        accepted = False
+        if (flags>0):
+            rr+=1
+
+        else:
+            rr-=1
+        mask = np.zeros((height, width), dtype=np.uint8)
+        mask = cv2.circle(mask, (xx, yy), rr, 255, -1)
+        cv2.imshow('mask', mask)
+
+
 def draw_elipse(event, x, y, flags, param):
     if event == cv2.EVENT_LBUTTONDOWN:
         global measure_size_clicks, measure_size_clicks_ptr,width,height,mask
@@ -343,6 +385,7 @@ def draw_elipse(event, x, y, flags, param):
             if xaxe > yaxe:
                 deg = -deg
             mask = np.zeros((height,width), dtype=np.uint8)
+
             mask =cv2.ellipse(mask ,(xcenter,ycenter), (xaxe,yaxe), -deg, 0.0,360.0,255,-1)
             cv2.imshow('mask', mask)
             measure_size_clicks=0
@@ -471,6 +514,72 @@ def string_patients(path):
     return string
 
 
+def random_image_on_path(path, target_size):
+    numb = len(i for i in os.listdir(path) if os.path.isfile(i))
+    j = np.random.randint(numb)
+    return read_and_size(str(j), path=path, target_size=target_size)
+
+def func_on_random_images(func, target_size, times=1, start_path=None, eye=None):
+    for i in range(times):
+        path = random_path(start_path,eye)
+        img = random_image_on_path(path, target_size)
+        func(img)
+
+
+def circle_mask_on_random_image_in_path(path, target_size=(240,192), r = None):
+    global accepted, winname, masks_done, rr
+
+    numb = len([i for i in os.listdir(path) if os.path.isfile(os.path.join(path, i))])
+    try:
+        j = np.random.randint(numb)
+    except:
+        print(path)
+        return
+
+
+    if not os.path.exists(path+'/mask'):
+        os.makedirs(path+'/mask')
+    if os.path.exists(path + '/mask/' + str(j) + '.jpg'):
+        return
+    if r == None:
+        rr = int(target_size[0]/10)
+    else:
+        rr = r
+    img = read_and_size(str(j), path=path, target_size=target_size)
+    show(img)
+
+    accepted = False
+    while (not accepted):
+        accepted = True
+
+        im2, contours, hierarchy = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        im2 = copy.deepcopy(img)
+        cv2.drawContours(im2, contours, 0, (0, 255, 255), 2)
+
+        show(im2)
+
+
+    split_path = path.split("/")[:-1]
+
+
+    repo_path = reduce((lambda x, y: x+'/'+y), split_path[:len(split_path)-3])
+    if not os.path.isfile(repo_path + "/maskData.csv"):
+        csvFile = open(repo_path+'/maskData.csv', 'w', newline="")
+        writer = csv.writer(csvFile)
+        writer.writerow(['patient', 'date', 'eye', 'name', 'width', 'height', 'x', 'y', 'r'])
+        csvFile.close()
+
+    csvFile = open(repo_path + '/maskData.csv', 'a', newline="")
+    writer = csv.writer(csvFile)
+    ls = split_path[-3:]
+    ls.extend([str(j), target_size[0], target_size[1], xx, yy, rr])
+    writer.writerow(ls)
+    csvFile.close()
+    cv2.imwrite(path + '/mask/' + str(j) + '.jpg', mask)
+    masks_done += 1
+    print("masks: " + str(masks_done))
+    cv2.destroyWindow('mask')
+
 def mask_on_path(path):
     global accepted,winname,masks_done
     if not os.path.exists(path+'/mask'):
@@ -507,13 +616,16 @@ def mask_on_path(path):
 
 
 def square_circle_on_1_2_in_path(path):
-    for i in range(2):
-        im, im_cp = read_and_size_with_copy(str(i), path=path, scale=0.15)
+    for i in range(6):
+        im, im_cp = read_and_size_with_copy(str(i), path=path, scale=0.2)
 
         im=equalize_border_with_mean_or_val(im)
 
-        #img_sqd = square_circle_minus_filter_2d(im)
-        img_sqd = circle_filter_2d(im)
+        h, w = np.shape(im)
+        r = (int)(h / 8)
+        img_sqd = square_circle_difference_filter_2d(im, r)
+        #img_sqd = square_circle_minus_filter_2d(im, r)
+        #img_sqd = circle_filter_2d(im)
 
         img_sqd = cv2.equalizeHist(img_sqd)
 
@@ -534,3 +646,10 @@ def square_circle_on_1_2_in_path(path):
             cv2.circle(im_cp, (cx,cy), r)
 
             show(im_cp)'''
+
+
+def model_show_function(x):
+    y=[]
+    for i in range(len(x)-1):
+        y.append(x[i+1])
+    show(x[0], other_im=y)

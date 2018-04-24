@@ -52,20 +52,20 @@ def show(im):
 cv2.namedWindow("win")
 depth = 5
 thresh = 60
-name = "1"
+name = "2"
 
 
 kernel = np.array(([1,0,1],[0,1,0],[1,0,1]), dtype=np.uint8)
 kernel2 = np.array(([0,1,0],[1,1,1],[0,1,0]), dtype=np.uint8)
-im = cv2.imread("Images/test/"+name+".jpg",0)
+im = cv2.imread("../../Images/test/"+name+".jpg",0)
 
 im=cv2.resize(im, (0,0), fx=0.3, fy=0.3)
 
 show(im)
 
 im = cv2.equalizeHist(im)
-clahe = cv2.createCLAHE(clipLimit=10.0, tileGridSize=(64,64))
-im = clahe.apply(im)
+#clahe = cv2.createCLAHE(clipLimit=10.0, tileGridSize=(64,64))
+#im = clahe.apply(im)
 
 
 ims=cp.deepcopy(im)
@@ -139,16 +139,16 @@ show(im)
 #im = cv2.morphologyEx(im, cv2.MORPH_CLOSE, (5, 5))
 '''
 show(im)
-
-im1=cv2.Sobel(im,depth,1,0, ksize=3)
+ksize=3
+im1=cv2.Sobel(im,depth,1,0, ksize=ksize)
 im1 = cv2.convertScaleAbs(im1)
 show(im1)
 
-im2=cv2.Sobel(im,depth,0,1, ksize=3)
+im2=cv2.Sobel(im,depth,0,1, ksize=ksize)
 im2 = cv2.convertScaleAbs(im2)
 show(im2)
 
-im3=cv2.Laplacian(im, 5)
+im3=cv2.Laplacian(im, depth,ksize=ksize)
 im3=cv2.convertScaleAbs(im3)
 show(im3)
 

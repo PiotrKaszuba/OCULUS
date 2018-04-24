@@ -5,6 +5,19 @@ import warnings
 import os
 
 
+
+
+def getAugmentationParams():
+    return{
+        "rotation_range" : 5.0,
+        "width_shift_range" : 0.04,
+        "height_shift_range": 0.04,
+        "zoom_range": 0.05,
+        "shear_range": 0.05,
+        "rescale": 1. / 255,
+        "fill_mode": 'constant'
+    }
+
 def _count_valid_files_in_directory_extension(directory, white_list_formats, follow_links):
     """Count files with extension in `white_list_formats` contained in a directory.
 
@@ -340,7 +353,7 @@ class DirectoryIteratorExtension(image.Iterator):
             index_array, current_index, current_batch_size = next(self.index_generator)
         # The transformation of images is not under thread lock
         # so it can be done in parallel
-        batch_x = np.zeros((current_batch_size,) + self.image_shape, dtype=K.floatx() )
+        batch_x = np.zeros((current_batch_size,) + self.image_shape, dtype=K.floatx())
         if self.class_mode == 'mask':
             batch_y = np.zeros((current_batch_size,) + self.image_shape, dtype=K.floatx())
         grayscale = self.color_mode == 'grayscale'
