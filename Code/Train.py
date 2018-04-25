@@ -13,7 +13,7 @@ total_ep = 1000
 ep = 1
 steps = 10
 
-rows, cols = md.Models.getRowsCols(level=image_size_level, base_scale=base_scale)
+cols, rows = md.Models.getColsRows(level=image_size_level, base_scale=base_scale)
 
 #data augmentation
 aug= dac.getAugmentationParams()

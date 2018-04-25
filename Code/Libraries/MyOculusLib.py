@@ -6,6 +6,7 @@ import os
 import shutil
 import csv
 from functools import reduce
+
 ####### <   Globals >
 masks_done =0
 patients_done=0
@@ -24,6 +25,7 @@ accepted = True
 rr = 0
 xx = 0
 yy = 0
+
 ###### <    Globals />
 
 
@@ -151,7 +153,7 @@ def all_path(func,start_path=None, eye=None):
 
 
     patient = os.listdir(start_path)
-    for i in range (len(a for a in patient if not os.path.isfile(a))):
+    for i in range (len([a for a in patient if not os.path.isfile(a)])):
         date = os.listdir(start_path + patient[i] + "/")
 
         for j in range(len(date)):
@@ -214,7 +216,7 @@ def modify_h_div_w(img, h_div_w, modify_height=False, not_modified_dim_wanted_va
     img = cv2.resize(img, (w,h))
     return img
 
-def read_and_size( name, path=None, extension='.jpg', scale=0.2, mode=0, modify_shape=True, h_div_w = 0, modify_height=False, not_modified_wanted_value=0, target_size=None):
+def read_and_size( name, path=None, extension='.jpg', scale=0, mode=0, modify_shape=True, h_div_w = 0, modify_height=False, not_modified_wanted_value=0, target_size=None):
     global image_path
     if path == None:
         path = image_path
@@ -230,7 +232,7 @@ def read_and_size( name, path=None, extension='.jpg', scale=0.2, mode=0, modify_
         load_h_w_from_img(im)
     return im
 
-def read_and_size_with_copy( name, path=None, extension='.jpg', scale=0.2, mode=0, modify_shape=True, h_div_w = 0, modify_height=False, not_modified_wanted_value=0, target_size=None):
+def read_and_size_with_copy( name, path=None, extension='.jpg', scale=0, mode=0, modify_shape=True, h_div_w = 0, modify_height=False, not_modified_wanted_value=0, target_size=None):
     global image_path
     if path == None:
         path = image_path
@@ -435,13 +437,13 @@ def set_h_w(h, w):
     width = w
 
 def load_h_w_from_img(img):
-    h, w = np.shape(img)
+    x = np.shape(img)
     global height
     global width
-    height = h
-    width = w
+    height = x[0]
+    width = x[1]
 
-def init(win='win', im_path = 'Images/all/', start_path='Images/all/', mouse_f=draw_elipse, w=518, h=392):
+def init(win='win', im_path = 'Images/all/', start_path='Images/all/', mouse_f=draw_circle, w=518, h=392):
     global winname
     global image_path
     global height
@@ -514,10 +516,34 @@ def string_patients(path):
     return string
 
 
-def random_image_on_path(path, target_size):
+def random_image_on_path(path, target_size=None, ret_numb=False):
     numb = len(i for i in os.listdir(path) if os.path.isfile(i))
     j = np.random.randint(numb)
-    return read_and_size(str(j), path=path, target_size=target_size)
+    im=read_and_size(str(j), path=path, target_size=target_size)
+    if ret_numb:
+        return im, j
+    return im
+
+
+def createImagesRepo(base_repo_path, repo_name):
+    if not os.path.exists(base_repo_path+repo_name):
+        os.makedirs(base_repo_path+repo_name)
+        return True
+    return False
+
+def createImageInPath(path, name, image, override=False):
+    if not os.path.exists(path):
+        os.makedirs(path)
+    if not os.path.isfile(path+name):
+        cv2.imwrite(path+name, image)
+        return True
+    if override:
+        cv2.imwrite(path + name, image)
+        return True
+    return False
+
+
+
 
 def func_on_random_images(func, target_size, times=1, start_path=None, eye=None):
     for i in range(times):
@@ -525,8 +551,275 @@ def func_on_random_images(func, target_size, times=1, start_path=None, eye=None)
         img = random_image_on_path(path, target_size)
         func(img)
 
+def getRepoPathAndImagePath(path):
+    path = path.split('/')[:-1]
+    repo = reduce((lambda x, y: x + '/' + y), path[:len(path) - 3])+'/'
+    image = reduce((lambda x, y: x + '/' + y), path[-3:])+'/'
+    return repo, image
+def getBaseRepoPathAndRepoName(repo_path):
+    repo_path = repo_path.split('/')[:-1]
+    base = reduce((lambda x, y: x + '/' + y), repo_path[:len(repo_path) - 1])
+    name = repo_path[-1]
+    return base, name
 
-def circle_mask_on_random_image_in_path(path, target_size=(240,192), r = None):
+def getPatientDateEye(image_path):
+    image_path=image_path.split('/')[:-1]
+    return image_path[0], image_path[1], image_path[2]
+
+def createFromAllPathImageAfterFunction(old_repo_path, new_repo_path, function, target_size=None, eye=None, override=False, extension='.jpg'):
+    success = 0
+    fail = 0
+    if eye != 'left' and eye != 'right':
+        eye='both'
+
+    patient = None
+
+
+    patient = os.listdir(old_repo_path)
+    for i in range (len([a for a in patient if not os.path.isfile(os.path.join(old_repo_path,a))])):
+        date = os.listdir(old_repo_path + patient[i] + "/")
+
+        for j in range(len(date)):
+            if eye == 'left':
+                t1, t2 = createImagesInRepoAfterFunctionOnPath(old_repo_path+patient[i]+'/'+date[j]+'/'+'left_eye_images/', new_repo_path,function,target_size,override, extension)
+                success+=t1
+                fail+=t2
+            if eye == 'right':
+                t1, t2 =createImagesInRepoAfterFunctionOnPath(old_repo_path+patient[i]+'/'+date[j]+'/'+'right_eye_images/', new_repo_path,function,target_size,override, extension)
+                success += t1
+                fail += t2
+            if eye == 'both':
+                t1, t2 =createImagesInRepoAfterFunctionOnPath(old_repo_path+patient[i]+'/'+date[j]+'/'+'left_eye_images/', new_repo_path,function,target_size,override, extension)
+                success += t1
+                fail += t2
+                t1, t2 =createImagesInRepoAfterFunctionOnPath(old_repo_path+patient[i]+'/'+date[j]+'/'+'right_eye_images/', new_repo_path,function,target_size,override, extension)
+                success += t1
+                fail += t2
+    print("Images created: " + str(success) + ", attempts failed to create: " + str(fail))
+def createFromRandomImageAfterFunction(old_repo_path, new_repo_path, function, target_size=None, times=1, eye=None, override=False, extension='.jpg'):
+    success = 0
+    fail = 0
+    for i in range(times):
+        rand_path = random_path(old_repo_path, eye)
+        img, numb = random_image_on_path(rand_path,target_size,ret_numb=True)
+
+        repo_path, image_path=getRepoPathAndImagePath(rand_path)
+        new_path = new_repo_path+image_path
+
+        if createImageInRepoAfterFunction(new_path,str(numb)+extension,img, function,override):
+            success+=1
+        else:
+            fail+=1
+    print("Images created: " + str(success) + ", attempts failed to create: " + str(fail))
+
+
+
+def createImagesInRepoAfterFunctionOnPath(path, new_repo_path, function, target_size, override=False, extension='.jpg'):
+    success = 0
+    fail = 0
+    repo_path, image_path = getRepoPathAndImagePath(path)
+
+    base2, name2 = getBaseRepoPathAndRepoName(new_repo_path)
+    createImagesRepo(base2, name2)
+    new_path = new_repo_path+image_path
+
+
+    for a in os.listdir(path):
+        if not os.path.isfile(os.path.join(path, a)):
+            continue
+        name = a.split(".")[0]
+        base_image = read_and_size(name, path=path, target_size=target_size)
+        image = function(base_image)
+
+        if createImageInPath(new_path, name+extension, image, override):
+            registerImageCsv(new_repo_path,image_path,name+extension,image,function)
+            success+=1
+        else:
+            fail+=1
+    return success, fail
+def createImageInRepoAfterFunction(path, image_name, base_image, function, override=False):
+    repo_path, image_path = getRepoPathAndImagePath(path)
+    base, name = getBaseRepoPathAndRepoName(repo_path)
+    createImagesRepo(base,name)
+    image = function(base_image)
+    if createImageInPath(repo_path+image_path, image_name, image, override):
+        registerImageCsv(repo_path,image_path,image_name,image,function)
+        return True
+    else:
+        return False
+
+def getWidthHeightChannels(image):
+    x = np.shape(image)
+    if len(x) == 2:
+        return x[1], x[0], 1
+    if len(x) == 3:
+        return x[1], x[0], x[2]
+
+def writeToCsv(path, header, row):
+
+    if not os.path.isfile(path):
+        csvFile = open(path, 'w', newline="")
+        writer = csv.writer(csvFile)
+        writer.writerow(header)
+        csvFile.close()
+
+    csvFile = open(path, 'a', newline="")
+    writer = csv.writer(csvFile)
+    writer.writerow(row)
+    csvFile.close()
+
+def registerImageCsv(repo_path, image_path, image_name, image, function):
+    patient, date, eye = getPatientDateEye(image_path)
+    width, height, channels = getWidthHeightChannels(image)
+    func_name = function.__name__
+    header = ['patient', 'date', 'eye', 'name', 'width', 'height', 'channels', 'function']
+    row = [patient, date, eye, image_name, width, height, channels, func_name]
+    writeToCsv(repo_path+"imageData.csv", header, row)
+
+
+def getCsvList(repo_path, image=True):
+
+    list = []
+    if image:
+        name = "imageData.csv"
+    else:
+        name= "maskData.csv"
+    with open(repo_path + name, 'r') as f:
+        reader = csv.reader(f)
+        next(reader, None)
+        for row in reader:
+            list.append(row)
+    return list
+def createMaskFromCsv(repo_path, imageRow, list = None, override=False):
+    if list is None:
+        list = getCsvList(repo_path, image=False)
+
+    target = None
+
+    for row in list:
+        equal = True
+        for j in range(4):
+            if row[j] != imageRow[j]:
+                equal=False
+                break
+        if equal:
+            target = row
+            break
+    if target is None:
+        return False
+
+    imageW = int(imageRow[4])
+    imageH = int(imageRow[5])
+
+    maskW = int(target[4])
+    maskH = int(target[5])
+    maskX = int(target[6])
+    maskY = int(target[7])
+    maskR = int(target[8])
+
+    Wratio = imageW/maskW
+    Hratio = imageH / maskH
+
+    Rratio = math.sqrt((((Wratio**2)+(Hratio**2))/2))
+
+    outX = int(maskX*(Wratio))
+    outY = int(maskY * (Hratio))
+    outR = int(maskR * (Rratio))
+    mask = np.zeros((imageH, imageW), dtype=np.uint8)
+    mask = cv2.circle(mask, (outX, outY), outR, 255, -1)
+
+    path = repo_path + reduce((lambda x, y: x + '/' + y), imageRow[:3])+'/mask/'
+
+    return createImageInPath(path,imageRow[3],mask,override)
+
+
+def checkIfPresentInCsv(repo_path, imageRow, list=None, image=True):
+    if list is None:
+        list= getCsvList(repo_path, image)
+    for row in list:
+        equal = True
+        for j in range(4):
+            if row[j] != imageRow[j]:
+                equal=False
+                break
+        if equal:
+            if image:
+                print("There is already image "+ reduce((lambda x, y: x + '/' + y), imageRow[:4]))
+            else:
+                print("There is already mask " + reduce((lambda x, y: x + '/' + y), imageRow[:3]) + '/mask/'+imageRow[3])
+            return False
+    return True
+
+
+def createAllMasksForImagesCsv(repo_path):
+    success = 0
+    fail = 0
+    list = getCsvList(repo_path, image=False)
+
+    with open(repo_path + "imageData.csv", 'r') as file:
+        reader = csv.reader(file)
+        next(reader,None)
+        for row in reader:
+            if createMaskFromCsv(repo_path,row,list,True):
+                success+=1
+            else:
+                fail+=1
+        file.close()
+    print("Masks created: "+str(success)+ ", failed to create: " +str(fail))
+
+
+def circle_mask_on_path(path, target_size=None, r = None,extension=".jpg"):
+    global accepted, winname, masks_done, rr
+    if r == None and target_size !=None:
+        rr = int(target_size[0]/10)
+    else:
+        rr = r
+    if not os.path.exists(path+'/mask'):
+        os.makedirs(path+'/mask')
+    for i in range( len([f for f in os.listdir(path) if os.path.isfile(os.path.join(path,f))])):
+        if os.path.exists(path+'/mask/'+str(i)+'.jpg'):
+            masks_done+=1
+            continue
+        ImName = str(i)+extension
+        img = read_and_size(str(i), path=path, target_size=target_size, extension=extension)
+        w,h,c = getWidthHeightChannels(img)
+        if r == None and target_size == None:
+            rr = int(w / 10)
+            target_size = (w, h)
+        show(img)
+
+        accepted = False
+        while (not accepted):
+            accepted = True
+
+            im2, contours, hierarchy = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+            im2 = copy.deepcopy(img)
+            cv2.drawContours(im2, contours, 0, (0, 255, 255), 2)
+
+            show(im2)
+
+        split_path = path.split("/")[:-1]
+
+        repo_path = reduce((lambda x, y: x + '/' + y), split_path[:len(split_path) - 3])
+        if not os.path.isfile(repo_path + "/maskData.csv"):
+            csvFile = open(repo_path + '/maskData.csv', 'w', newline="")
+            writer = csv.writer(csvFile)
+            writer.writerow(['patient', 'date', 'eye', 'name', 'width', 'height', 'x', 'y', 'r'])
+            csvFile.close()
+
+        csvFile = open(repo_path + '/maskData.csv', 'a', newline="")
+        writer = csv.writer(csvFile)
+        ls = split_path[-3:]
+        ls.extend([ImName, target_size[0], target_size[1], xx, yy, rr])
+        writer.writerow(ls)
+        csvFile.close()
+        cv2.imwrite(path + '/mask/' + ImName, mask)
+        masks_done += 1
+        print("masks: " + str(masks_done))
+        cv2.destroyWindow('mask')
+
+
+def circle_mask_on_random_image_in_path(path, target_size=None, r = None, extension=".jpg"):
     global accepted, winname, masks_done, rr
 
     numb = len([i for i in os.listdir(path) if os.path.isfile(os.path.join(path, i))])
@@ -541,11 +834,16 @@ def circle_mask_on_random_image_in_path(path, target_size=(240,192), r = None):
         os.makedirs(path+'/mask')
     if os.path.exists(path + '/mask/' + str(j) + '.jpg'):
         return
-    if r == None:
+    if r == None and target_size!=None:
         rr = int(target_size[0]/10)
     else:
         rr = r
-    img = read_and_size(str(j), path=path, target_size=target_size)
+    ImName=str(j)+extension
+    img = read_and_size(str(j), path=path, target_size=target_size, extension=extension)
+    w, h, c = getWidthHeightChannels(img)
+    if r == None and target_size == None:
+        rr = int(w / 10)
+        target_size=(w,h)
     show(img)
 
     accepted = False
@@ -572,10 +870,10 @@ def circle_mask_on_random_image_in_path(path, target_size=(240,192), r = None):
     csvFile = open(repo_path + '/maskData.csv', 'a', newline="")
     writer = csv.writer(csvFile)
     ls = split_path[-3:]
-    ls.extend([str(j), target_size[0], target_size[1], xx, yy, rr])
+    ls.extend([ImName, target_size[0], target_size[1], xx, yy, rr])
     writer.writerow(ls)
     csvFile.close()
-    cv2.imwrite(path + '/mask/' + str(j) + '.jpg', mask)
+    cv2.imwrite(path + '/mask/' + ImName, mask)
     masks_done += 1
     print("masks: " + str(masks_done))
     cv2.destroyWindow('mask')
@@ -584,7 +882,7 @@ def mask_on_path(path):
     global accepted,winname,masks_done
     if not os.path.exists(path+'/mask'):
         os.makedirs(path+'/mask')
-    for i in range( len(os.listdir(path))-1):
+    for i in range(len([f for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))])):
         if os.path.exists(path+'/mask/'+str(i)+'.jpg'):
             masks_done+=1
             continue

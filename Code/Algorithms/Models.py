@@ -12,7 +12,7 @@ class Models:
     col_multi = 16
 
     @staticmethod
-    def getRowsCols(level, base_scale, use_col=True):
+    def getColsRows(level, base_scale, use_col=True):
         if use_col:
             cols = int(Models.col_multi * level)
             rows = int(round(level*base_scale)*Models.row_multi)
@@ -20,7 +20,7 @@ class Models:
             rows = int(Models.row_multi * level)
             cols = int(round(level * base_scale) * Models.col_multi)
 
-        return rows,cols
+        return cols,rows
 
     def __init__(self, rowDim, colDim, modify_col= False, row_div_col=0, weights_path="../weights/unet", var_filename="../weights/var.txt", show_function=None, read_func=None, validate_path_provider_func= None, validate_start_path=None):
         self.model = None
