@@ -620,7 +620,7 @@ def createImagesInRepoAfterFunctionOnPath(path, new_repo_path, function, target_
     repo_path, image_path = getRepoPathAndImagePath(path)
 
     base2, name2 = getBaseRepoPathAndRepoName(new_repo_path)
-    createImagesRepo(base2, name2)
+    createImagesRepo(base2+'/', name2)
     new_path = new_repo_path+image_path
 
 
@@ -640,7 +640,7 @@ def createImagesInRepoAfterFunctionOnPath(path, new_repo_path, function, target_
 def createImageInRepoAfterFunction(path, image_name, base_image, function, override=False):
     repo_path, image_path = getRepoPathAndImagePath(path)
     base, name = getBaseRepoPathAndRepoName(repo_path)
-    createImagesRepo(base,name)
+    createImagesRepo(base+'/',name)
     image = function(base_image)
     if createImageInPath(repo_path+image_path, image_name, image, override):
         registerImageCsv(repo_path,image_path,image_name,image,function)
