@@ -1,6 +1,6 @@
 import Code.Libraries.MyOculusLib as mol
 import Code.Algorithms.Models as md
-path = '../../../Images/repoTest/'
+path = '../../../Images/data/'
 
 mol.init(im_path=path, mouse_f=mol.draw_circle)
 

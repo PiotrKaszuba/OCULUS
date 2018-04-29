@@ -136,7 +136,8 @@ class ImageDataGeneratorExtension(image.ImageDataGenerator):
                                 save_to_dir=None,
                                 save_prefix='',
                                 save_format='png',
-                                follow_links=False):
+                                follow_links=False,
+                                channels_out= 1):
             return DirectoryIteratorExtension(
                 directory, self,
                 target_size=target_size, color_mode=color_mode,
@@ -146,7 +147,8 @@ class ImageDataGeneratorExtension(image.ImageDataGenerator):
                 save_to_dir=save_to_dir,
                 save_prefix=save_prefix,
                 save_format=save_format,
-                follow_links=follow_links)
+                follow_links=follow_links,
+                channels_out=channels_out)
 
 
     def flow(self, x, y=None, batch_size=32, shuffle=True, seed=None,
@@ -265,27 +267,34 @@ class DirectoryIteratorExtension(image.Iterator):
                  batch_size=32, shuffle=True, seed=None,
                  data_format=None,
                  save_to_dir=None, save_prefix='', save_format='png',
-                 follow_links=False):
+                 follow_links=False,
+                 channels_out=1):
         if data_format is None:
             data_format = K.image_data_format()
         self.directory = directory
         self.image_data_generator = image_data_generator
         self.target_size = tuple(target_size)
+        self.channels_out = channels_out
         if color_mode not in {'rgb', 'grayscale'}:
             raise ValueError('Invalid color mode:', color_mode,
                              '; expected "rgb" or "grayscale".')
         self.color_mode = color_mode
         self.data_format = data_format
+        self.out_shape=None
         if self.color_mode == 'rgb':
             if self.data_format == 'channels_last':
                 self.image_shape = self.target_size + (3,)
+                self.out_shape = self.target_size + (self.channels_out,)
             else:
                 self.image_shape = (3,) + self.target_size
+                self.out_shape = (self.channels_out,) + self.target_size
         else:
             if self.data_format == 'channels_last':
                 self.image_shape = self.target_size + (1,)
+                self.out_shape = self.target_size + (self.channels_out,)
             else:
                 self.image_shape = (1,) + self.target_size
+                self.out_shape =(self.channels_out,)+  self.target_size
         self.classes = classes
         if class_mode not in {'categorical', 'binary', 'sparse',
                               'input', 'mask', None}:
@@ -355,7 +364,7 @@ class DirectoryIteratorExtension(image.Iterator):
         # so it can be done in parallel
         batch_x = np.zeros((current_batch_size,) + self.image_shape, dtype=K.floatx())
         if self.class_mode == 'mask':
-            batch_y = np.zeros((current_batch_size,) + self.image_shape, dtype=K.floatx())
+            batch_y = np.zeros((current_batch_size,) + self.out_shape, dtype=K.floatx())
         grayscale = self.color_mode == 'grayscale'
         # build batch of image data
         for i, j in enumerate(index_array):
@@ -370,7 +379,7 @@ class DirectoryIteratorExtension(image.Iterator):
                 words.insert(-1,"mask")
                 fname= "\\".join(words)
                 img2 = image.load_img(os.path.join(self.directory, fname),
-                           grayscale=grayscale,
+                           grayscale=True, #todo - cant read more than one channel for label though there is parameter channels_out
                            target_size=self.target_size)
                 y = image.img_to_array(img2, data_format=self.data_format)
                 x, y = self.image_data_generator.random_transform_extension(x, y)

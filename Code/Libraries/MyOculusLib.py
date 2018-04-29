@@ -512,6 +512,8 @@ def string_patients(path):
     list = os.listdir(path)
     string = ''
     for item in sorted(list):
+        if os.path.isfile(os.path.join(path, item)):
+            continue
         string+= item+'\n'
     return string
 
@@ -566,7 +568,7 @@ def getPatientDateEye(image_path):
     image_path=image_path.split('/')[:-1]
     return image_path[0], image_path[1], image_path[2]
 
-def createFromAllPathImageAfterFunction(old_repo_path, new_repo_path, function, target_size=None, eye=None, override=False, extension='.jpg'):
+def createFromAllPathImageAfterFunction(old_repo_path, new_repo_path, function, target_size=None, eye=None, override=False, extension='.jpg', onlyMasked=False):
     success = 0
     fail = 0
     if eye != 'left' and eye != 'right':
@@ -574,27 +576,31 @@ def createFromAllPathImageAfterFunction(old_repo_path, new_repo_path, function, 
 
     patient = None
 
-
+    iter = 0
     patient = os.listdir(old_repo_path)
     for i in range (len([a for a in patient if not os.path.isfile(os.path.join(old_repo_path,a))])):
+
         date = os.listdir(old_repo_path + patient[i] + "/")
 
         for j in range(len(date)):
             if eye == 'left':
-                t1, t2 = createImagesInRepoAfterFunctionOnPath(old_repo_path+patient[i]+'/'+date[j]+'/'+'left_eye_images/', new_repo_path,function,target_size,override, extension)
+                t1, t2 = createImagesInRepoAfterFunctionOnPath(old_repo_path+patient[i]+'/'+date[j]+'/'+'left_eye_images/', new_repo_path,function,target_size,override, extension, onlyMasked)
                 success+=t1
                 fail+=t2
             if eye == 'right':
-                t1, t2 =createImagesInRepoAfterFunctionOnPath(old_repo_path+patient[i]+'/'+date[j]+'/'+'right_eye_images/', new_repo_path,function,target_size,override, extension)
+                t1, t2 =createImagesInRepoAfterFunctionOnPath(old_repo_path+patient[i]+'/'+date[j]+'/'+'right_eye_images/', new_repo_path,function,target_size,override, extension, onlyMasked)
                 success += t1
                 fail += t2
             if eye == 'both':
-                t1, t2 =createImagesInRepoAfterFunctionOnPath(old_repo_path+patient[i]+'/'+date[j]+'/'+'left_eye_images/', new_repo_path,function,target_size,override, extension)
+                t1, t2 =createImagesInRepoAfterFunctionOnPath(old_repo_path+patient[i]+'/'+date[j]+'/'+'left_eye_images/', new_repo_path,function,target_size,override, extension, onlyMasked)
                 success += t1
                 fail += t2
-                t1, t2 =createImagesInRepoAfterFunctionOnPath(old_repo_path+patient[i]+'/'+date[j]+'/'+'right_eye_images/', new_repo_path,function,target_size,override, extension)
+                t1, t2 =createImagesInRepoAfterFunctionOnPath(old_repo_path+patient[i]+'/'+date[j]+'/'+'right_eye_images/', new_repo_path,function,target_size,override, extension, onlyMasked)
                 success += t1
                 fail += t2
+        iter += 1
+        print("Patients finished: " + str(iter))
+
     print("Images created: " + str(success) + ", attempts failed to create: " + str(fail))
 def createFromRandomImageAfterFunction(old_repo_path, new_repo_path, function, target_size=None, times=1, eye=None, override=False, extension='.jpg'):
     success = 0
@@ -614,7 +620,7 @@ def createFromRandomImageAfterFunction(old_repo_path, new_repo_path, function, t
 
 
 
-def createImagesInRepoAfterFunctionOnPath(path, new_repo_path, function, target_size, override=False, extension='.jpg'):
+def createImagesInRepoAfterFunctionOnPath(path, new_repo_path, function, target_size, override=False, extension='.jpg', onlyMasked = False):
     success = 0
     fail = 0
     repo_path, image_path = getRepoPathAndImagePath(path)
@@ -626,6 +632,8 @@ def createImagesInRepoAfterFunctionOnPath(path, new_repo_path, function, target_
 
     for a in os.listdir(path):
         if not os.path.isfile(os.path.join(path, a)):
+            continue
+        if onlyMasked and not os.path.isfile(os.path.join(path+'mask/', a)):
             continue
         name = a.split(".")[0]
         base_image = read_and_size(name, path=path, target_size=target_size)
@@ -826,14 +834,17 @@ def circle_mask_on_random_image_in_path(path, target_size=None, r = None, extens
     try:
         j = np.random.randint(numb)
     except:
-        print(path)
+        print(path+", numb: "+numb+", j: "+j)
         return
 
 
     if not os.path.exists(path+'/mask'):
         os.makedirs(path+'/mask')
-    if os.path.exists(path + '/mask/' + str(j) + '.jpg'):
+    tempName = path + '/mask/' + str(j) + '.jpg'
+    if os.path.exists(tempName):
+        print("Path exists (" + tempName + ")")
         return
+
     if r == None and target_size!=None:
         rr = int(target_size[0]/10)
     else:

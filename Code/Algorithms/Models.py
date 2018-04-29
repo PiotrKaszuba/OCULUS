@@ -22,12 +22,15 @@ class Models:
 
         return cols,rows
 
-    def __init__(self, rowDim, colDim, modify_col= False, row_div_col=0, weights_path="../weights/unet", var_filename="../weights/var.txt", show_function=None, read_func=None, validate_path_provider_func= None, validate_start_path=None):
+    def __init__(self, rowDim, colDim, mode=0, channels=1, out_channels=1, modify_col= False, row_div_col=0, weights_path="../weights/unet", var_filename="../weights/var.txt", show_function=None, read_func=None, validate_path_provider_func= None, validate_start_path=None):
         self.model = None
         self.path= weights_path
         self.var_filename= var_filename
         self.rowDim = int(rowDim)
         self.colDim = int(colDim)
+        self.mode=mode
+        self.channels = channels
+        self.out_channels=out_channels
         self.row_div_col = row_div_col
         self.show_function = show_function
         self.read_func = read_func
@@ -44,7 +47,9 @@ class Models:
         self.model.save_weights(self.path + str(self.var_file()))
 
     def load_weights(self):
-        self.model.load_weights(self.path + str(self.var_file(True)))
+        numb = self.var_file(True)
+        if numb > 0:
+            self.model.load_weights(self.path + str(numb))
 
     def validate(self, pathForce=None):
 
@@ -54,8 +59,8 @@ class Models:
             else:
                 path = pathForce
             for i in range(len(os.listdir(path)) - 2):
-                img = self.read_func(name=str(i), path=path, target_size=(self.colDim, self.rowDim))
-                imgX = img.reshape((1, self.rowDim, self.colDim, 1))
+                img = self.read_func(name=str(i), path=path, target_size=(self.colDim, self.rowDim), mode=self.mode)
+                imgX = img.reshape((1, self.rowDim, self.colDim, self.channels))
                 pred = self.model.predict(imgX)
                 pred = pred.reshape((self.rowDim, self.colDim))
 
@@ -66,11 +71,11 @@ class Models:
         for i in range(times):
             pic = validate_generator.next()
 
-            pred = self.model.predict(pic[0][0].reshape(1,self.rowDim,self.colDim,1))
+            pred = self.model.predict(pic[0][0].reshape(1,self.rowDim,self.colDim,self.channels))
             x = []
-            for i in range(len(pic)):
-                x.append(pic[i][0].reshape((self.rowDim, self.colDim)))
 
+            x.append(pic[0][0].reshape((self.rowDim, self.colDim,self.channels)))
+            x.append(pic[1][0].reshape((self.rowDim, self.colDim, self.out_channels)))
             x.append(pred.reshape((self.rowDim, self.colDim)))
             if self.show_function != None:
                 self.show_function(x)
@@ -101,7 +106,7 @@ class Models:
         if self.model != None:
             return self.model
 
-        inputs = Input((self.rowDim, self.colDim, 1))
+        inputs = Input((self.rowDim, self.colDim, self.channels))
         conv1 = Conv2D(filters, 3, activation='relu', padding='same', kernel_initializer='he_normal')(inputs)
 
         print("conv1 shape:", conv1.shape)
