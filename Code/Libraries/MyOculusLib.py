@@ -602,6 +602,10 @@ def createFromAllPathImageAfterFunction(old_repo_path, new_repo_path, function, 
         print("Patients finished: " + str(iter))
 
     print("Images created: " + str(success) + ", attempts failed to create: " + str(fail))
+
+def copyMaskData(old_repo_path, new_repo_path):
+    shutil.copyfile(old_repo_path+'maskData.csv', new_repo_path+'maskData.csv')
+
 def createFromRandomImageAfterFunction(old_repo_path, new_repo_path, function, target_size=None, times=1, eye=None, override=False, extension='.jpg'):
     success = 0
     fail = 0
@@ -763,7 +767,7 @@ def createAllMasksForImagesCsv(repo_path):
     success = 0
     fail = 0
     list = getCsvList(repo_path, image=False)
-
+    iter=0
     with open(repo_path + "imageData.csv", 'r') as file:
         reader = csv.reader(file)
         next(reader,None)
@@ -772,6 +776,8 @@ def createAllMasksForImagesCsv(repo_path):
                 success+=1
             else:
                 fail+=1
+            iter+=1
+            print("Images looped: " + str(iter))
         file.close()
     print("Masks created: "+str(success)+ ", failed to create: " +str(fail))
 

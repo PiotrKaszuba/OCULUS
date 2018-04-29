@@ -29,7 +29,7 @@ else:
 #data augmentation
 aug= dac.getAugmentationParams()
 
-path = base_path+'Images/data/'
+path = base_path+'Images/merged/'
 
 class_mode='mask'
 

@@ -1,5 +1,4 @@
 import Code.Libraries.MyOculusLib as mol
-import numpy as np
 import Code.Preprocessing.image_creation.MergeChannels as mc
 import Code.Algorithms.Models as md
 
