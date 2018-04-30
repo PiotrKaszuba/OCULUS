@@ -6,6 +6,7 @@ import os
 import shutil
 import csv
 from functools import reduce
+import random
 
 ####### <   Globals >
 masks_done =0
@@ -153,7 +154,8 @@ def all_path(func,start_path=None, eye=None):
 
 
     patient = os.listdir(start_path)
-    for i in range (len([a for a in patient if not os.path.isfile(a)])):
+    max = len([a for a in patient if not os.path.isfile(os.path.join(start_path,a))])
+    for i in range (max):
         date = os.listdir(start_path + patient[i] + "/")
 
         for j in range(len(date)):
@@ -702,21 +704,36 @@ def getCsvList(repo_path, image=True):
         for row in reader:
             list.append(row)
     return list
-def createMaskFromCsv(repo_path, imageRow, list = None, override=False):
+
+def checkIfExistsInCSV(patientDateEyeNameList, repo_path=None, list= None, image=True, returnTargetRow=False):
+    print("Just checking CSV, dont worry")
+    assert list is not None or repo_path is not None
     if list is None:
-        list = getCsvList(repo_path, image=False)
-
+        list = getCsvList(repo_path, image=image)
     target = None
-
     for row in list:
         equal = True
         for j in range(4):
-            if row[j] != imageRow[j]:
+            if row[j] != patientDateEyeNameList[j]:
                 equal=False
                 break
         if equal:
             target = row
             break
+    if returnTargetRow:
+        return target
+    else:
+        if target is None:
+            return False
+        else:
+            return True
+
+
+def createMaskFromCsv(repo_path, imageRow, list = None, override=False):
+    if list is None:
+        list = getCsvList(repo_path, image=False)
+
+    target = checkIfExistsInCSV(imageRow, repo_path=repo_path, list=list, image=False, returnTargetRow=True)
     if target is None:
         return False
 
@@ -782,7 +799,7 @@ def createAllMasksForImagesCsv(repo_path):
     print("Masks created: "+str(success)+ ", failed to create: " +str(fail))
 
 
-def circle_mask_on_path(path, target_size=None, r = None,extension=".jpg"):
+def circle_mask_on_path(path, target_size=None, r = None,extension=".jpg", check_csv=True, list=None):
     global accepted, winname, masks_done, rr
     if r == None and target_size !=None:
         rr = int(target_size[0]/10)
@@ -790,11 +807,30 @@ def circle_mask_on_path(path, target_size=None, r = None,extension=".jpg"):
         rr = r
     if not os.path.exists(path+'/mask'):
         os.makedirs(path+'/mask')
-    for i in range( len([f for f in os.listdir(path) if os.path.isfile(os.path.join(path,f))])):
-        if os.path.exists(path+'/mask/'+str(i)+'.jpg'):
-            masks_done+=1
+    skipped=0
+    for ii in range(len([f for f in os.listdir(path) if os.path.isfile(os.path.join(path,f))])):
+        i = ii +skipped
+        ImName = str(i) + extension
+        while not os.path.exists(os.path.join(path, ImName)):
+            skipped += 1
+            i = ii + skipped
+            ImName = str(i) + extension
+
+        tempName = path + '/mask/' + ImName
+        if os.path.exists(tempName):
+            print("Path exists (" + tempName + ")")
+            masks_done += 1
             continue
-        ImName = str(i)+extension
+
+        if check_csv:
+            paths = getRepoPathAndImagePath(path)
+            row = paths[1].split("/")[:-1]
+            row.append(ImName)
+            if checkIfExistsInCSV(row, paths[0], list, False):
+                print("In CSV exists (" + tempName + ")")
+                continue
+
+
         img = read_and_size(str(i), path=path, target_size=target_size, extension=extension)
         w,h,c = getWidthHeightChannels(img)
         if r == None and target_size == None:
@@ -833,30 +869,38 @@ def circle_mask_on_path(path, target_size=None, r = None,extension=".jpg"):
         cv2.destroyWindow('mask')
 
 
-def circle_mask_on_random_image_in_path(path, target_size=None, r = None, extension=".jpg"):
-    global accepted, winname, masks_done, rr
+def circle_mask_on_random_image_in_path(path, target_size=None, r = None, extension=".jpg", check_csv=True, list=None):
+    global accepted, winname, masks_done, rr, random
 
     numb = len([i for i in os.listdir(path) if os.path.isfile(os.path.join(path, i))])
+    temp = ([a for a in os.listdir(path) if os.path.isfile(os.path.join(path, a))])
     try:
         j = np.random.randint(numb)
     except:
-        print(path+", numb: "+numb+", j: "+j)
+        print(path+", numb: "+str(numb))
         return
 
-
+    ImName = random.choice(temp)
     if not os.path.exists(path+'/mask'):
         os.makedirs(path+'/mask')
-    tempName = path + '/mask/' + str(j) + '.jpg'
+    tempName = path + '/mask/' + ImName
     if os.path.exists(tempName):
         print("Path exists (" + tempName + ")")
         return
+    if check_csv:
+        paths = getRepoPathAndImagePath(path)
+        row = paths[1].split("/")[:-1]
+        row.append(ImName)
+        if checkIfExistsInCSV(row, paths[0], list, False):
+            print("In CSV exists (" + tempName + ")")
+            return
 
     if r == None and target_size!=None:
         rr = int(target_size[0]/10)
     else:
         rr = r
-    ImName=str(j)+extension
-    img = read_and_size(str(j), path=path, target_size=target_size, extension=extension)
+
+    img = read_and_size(ImName, path=path, target_size=target_size, extension='')
     w, h, c = getWidthHeightChannels(img)
     if r == None and target_size == None:
         rr = int(w / 10)

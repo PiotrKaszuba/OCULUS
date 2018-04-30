@@ -1,3 +1,6 @@
+
+#Creates masks for image shape in new repo based on imageData and maskData in repo (for every image search if there was mask)
+
 import Code.Libraries.MyOculusLib as mol
 
 

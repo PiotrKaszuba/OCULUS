@@ -1,5 +1,9 @@
+
+
+#Builds a Repo based on existing repo (only images with mask) changing target image size and preprocessing images with function
+
 import Code.Libraries.MyOculusLib as mol
-import Code.Preprocessing.image_creation.MergeChannels as mc
+import Code.Preprocessing.MergeChannels as mc
 import Code.Algorithms.Models as md
 
 #init
