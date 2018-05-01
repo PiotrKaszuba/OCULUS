@@ -39,7 +39,7 @@ read_function = mol.read_and_size
 validate_path_provider_func = mol.random_path
 validate_start_path = base_path+'Images/awaiting/'
 
-filters=1
+filters=2
 
 load_weights=True
 weights_path="../weights/unet"
