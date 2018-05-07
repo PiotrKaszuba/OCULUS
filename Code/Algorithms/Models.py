@@ -51,8 +51,8 @@ class Models:
         if numb > 0:
             self.model.load_weights(self.path + str(numb))
 
-    def metrics(pred,true):
-        return met.customMetric(pred,true)
+    def metr(pred, true):
+        return met.customMetric(pred, true)
 
     def validate(self, pathForce=None):
 
@@ -81,7 +81,7 @@ class Models:
             pred = pred.reshape((self.rowDim, self.colDim))
             #print(met.centerDiff(pred,true,check=False))
             #print(met.binaryDiff(pred,true))
-            print("Custom metric: " +str(self.metrics(pred, true)))
+            print("Custom metric: " +str(met.customMetric(pred, true)))
             x = []
 
             x.append(pic[0][0].reshape((self.rowDim, self.colDim,self.channels)))
