@@ -64,8 +64,13 @@ class Models:
             for i in range(len(os.listdir(path)) - 2):
                 img = self.read_func(name=str(i), path=path, target_size=(self.colDim, self.rowDim), mode=self.mode)
                 imgX = img.reshape((1, self.rowDim, self.colDim, self.channels))
+                imgX = imgX/255
                 pred = self.model.predict(imgX)
                 pred = pred.reshape((self.rowDim, self.colDim))
+                true_path = path+'mask/'
+                if os.path.exists(os.path.join(true_path, str(i)+'.jpg')):
+                    true = self.read_func(name=str(i), path=true_path, target_size=(self.colDim, self.rowDim))
+                    print("Custom metric: " + str(met.customMetric(pred, true, check=False)))
 
                 x = [img, pred]
                 self.show_function(x)

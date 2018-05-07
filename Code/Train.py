@@ -5,7 +5,7 @@ from Code.Libraries import DataAugmentationClasses as dac
 
 #params
 base_path='../'
-image_size_level=15
+image_size_level=20
 base_scale=0.75
 
 batch_size = 32
@@ -37,15 +37,15 @@ class_mode='mask'
 show_function = mol.model_show_function
 read_function = mol.read_and_size
 validate_path_provider_func = mol.random_path
-validate_start_path = base_path+'Images/awaiting/'
+validate_start_path = base_path+'Images/validate/'
 
-filters=1
+filters=12
 
 load_weights=True
 weights_path="../weights/unet"
 var_filename="../weights/var.txt"
-validate=False
-check_perf_times=3
+validate=True
+check_perf_times=0
 check_perf_times_in_loop=0
 learn_rate = 1e-04
 #setup
