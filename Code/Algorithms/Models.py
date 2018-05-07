@@ -6,7 +6,7 @@ from keras.layers import Input, merge, Conv2D, MaxPooling2D, UpSampling2D, Dropo
 from keras.optimizers import *
 from keras.callbacks import ModelCheckpoint, LearningRateScheduler
 from keras import backend as keras
-
+import Code.Algorithms.Metrics as met
 class Models:
     row_multi = 16
     col_multi = 16
@@ -51,6 +51,8 @@ class Models:
         if numb > 0:
             self.model.load_weights(self.path + str(numb))
 
+    def centerDiffMetric(pred, x, y):
+        return met.centerDiff(pred,x,y)
 
     def validate(self, pathForce=None):
 
@@ -72,12 +74,18 @@ class Models:
         for i in range(times):
             pic = validate_generator.next()
 
+            true = pic[1][0].reshape((self.rowDim, self.colDim, self.out_channels))
+
             pred = self.model.predict(pic[0][0].reshape(1,self.rowDim,self.colDim,self.channels))
+            pred = pred.reshape((self.rowDim, self.colDim))
+            #print(met.centerDiff(pred,true,check=False))
+            #print(met.binaryDiff(pred,true))
+            print("Custom metric: " +str(met.customMetric(pred, true)))
             x = []
 
             x.append(pic[0][0].reshape((self.rowDim, self.colDim,self.channels)))
-            x.append(pic[1][0].reshape((self.rowDim, self.colDim, self.out_channels)))
-            x.append(pred.reshape((self.rowDim, self.colDim)))
+            x.append(true)
+            x.append(pred)
             if self.show_function != None:
                 self.show_function(x)
 
