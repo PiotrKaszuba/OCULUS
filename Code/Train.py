@@ -7,7 +7,13 @@ from Code.Libraries import DataAugmentationClasses as dac
 base_path='../'
 image_size_level=20
 base_scale=0.75
-
+withMetricOrNo = 2
+onlyWithMetric = False
+onlyWithoutMetric = False
+if(withMetricOrNo == 1):
+	onlyWithMetric = True
+if (withMetricOrNo == 2):
+	onlyWithoutMetric = True
 batch_size = 32
 total_ep = 1000
 ep = 1
@@ -37,7 +43,7 @@ class_mode='mask'
 show_function = mol.model_show_function
 read_function = mol.read_and_size
 validate_path_provider_func = mol.random_path
-validate_start_path = base_path+'Images/validate/'
+validate_start_path = base_path+'Images/all/'
 
 filters=12
 
@@ -69,7 +75,7 @@ Mod.check_performance(train_generator, times=check_perf_times)
 
 #go
 if validate:
-	Mod.validate()
+	Mod.validate(onlyWithMetric=onlyWithMetric, onlyWithoutMetric=onlyWithoutMetric)
 else:
 	for i in range(total_ep):
 		print("ep:"+str(i))
