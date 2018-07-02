@@ -2,7 +2,7 @@ import os
 # os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 import numpy as np
 from keras.models import *
-from keras.layers import Input, merge, Conv2D, MaxPooling2D, UpSampling2D, Dropout, Cropping2D
+from keras.layers import Input, concatenate, Conv2D, MaxPooling2D, UpSampling2D, Dropout, Cropping2D
 from keras.optimizers import *
 from keras.callbacks import ModelCheckpoint, LearningRateScheduler
 from keras import backend as keras
@@ -75,7 +75,8 @@ class Models:
                 im = self.read_func(name=str(i), path=path, target_size=(self.colDim, self.rowDim), mode=validateMode)
                 img = merge.Merge(im)
                 imgX = img.reshape((1, self.rowDim, self.colDim, self.channels))
-                imgX = imgX/255                pred = self.model.predict(imgX)
+                imgX = imgX/255
+                pred = self.model.predict(imgX)
                 pred = pred.reshape((self.rowDim, self.colDim))
 
                 if os.path.exists(os.path.join(true_path, str(i)+'.jpg')):
@@ -165,25 +166,25 @@ class Models:
 
         up6 = Conv2D(filters*8, 2, activation='relu', padding='same', kernel_initializer='he_normal')(
             UpSampling2D(size=(2, 2))(drop5))
-        merge6 = merge([drop4, up6], mode='concat', concat_axis=3)
+        merge6 = concatenate([drop4, up6], axis=3)
         conv6 = Conv2D(filters*8, 3, activation='relu', padding='same', kernel_initializer='he_normal')(merge6)
         conv6 = Conv2D(filters*8, 3, activation='relu', padding='same', kernel_initializer='he_normal')(conv6)
 
         up7 = Conv2D(filters*4, 2, activation='relu', padding='same', kernel_initializer='he_normal')(
             UpSampling2D(size=(2, 2))(conv6))
-        merge7 = merge([conv3, up7], mode='concat', concat_axis=3)
+        merge7 = concatenate([conv3, up7], axis=3)
         conv7 = Conv2D(filters*4, 3, activation='relu', padding='same', kernel_initializer='he_normal')(merge7)
         conv7 = Conv2D(filters*4, 3, activation='relu', padding='same', kernel_initializer='he_normal')(conv7)
 
         up8 = Conv2D(filters*2, 2, activation='relu', padding='same', kernel_initializer='he_normal')(
             UpSampling2D(size=(2, 2))(conv7))
-        merge8 = merge([conv2, up8], mode='concat', concat_axis=3)
+        merge8 = concatenate([conv2, up8], axis=3)
         conv8 = Conv2D(filters*2, 3, activation='relu', padding='same', kernel_initializer='he_normal')(merge8)
         conv8 = Conv2D(filters*2, 3, activation='relu', padding='same', kernel_initializer='he_normal')(conv8)
 
         up9 = Conv2D(filters, 2, activation='relu', padding='same', kernel_initializer='he_normal')(
             UpSampling2D(size=(2, 2))(conv8))
-        merge9 = merge([conv1, up9], mode='concat', concat_axis=3)
+        merge9 = concatenate([conv1, up9], axis=3)
         conv9 = Conv2D(filters, 3, activation='relu', padding='same', kernel_initializer='he_normal')(merge9)
         conv9 = Conv2D(filters, 3, activation='relu', padding='same', kernel_initializer='he_normal')(conv9)
         conv9 = Conv2D(2, 3, activation='relu', padding='same', kernel_initializer='he_normal')(conv9)

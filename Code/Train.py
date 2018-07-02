@@ -49,8 +49,9 @@ filters=12
 load_weights=True
 weights_path="../weights/unet"
 var_filename="../weights/var.txt"
-validate=True
-check_perf_times=0check_perf_times_in_loop=0
+validate=False
+check_perf_times=30
+check_perf_times_in_loop=0
 learn_rate = 1e-04
 #setup
 mol.init(im_path=path)
