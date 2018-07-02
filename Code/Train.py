@@ -1,3 +1,10 @@
+#Keras 2.1.6 or 2.2
+#h5py 2.7.1
+#numpy 1.14.3
+#Python 3.6 or 3.5.3
+#opencv_python 3.4.0.12
+#
+
 from Code.Libraries import MyOculusLib as mol
 from Code.Algorithms import Models as md
 from Code.Libraries import DataAugmentationClasses as dac
@@ -41,12 +48,13 @@ validate_start_path = base_path+'Images/valildate/'
 
 filters=12
 
-load_weights=True
+load_weights=False
 weights_path="../weights/unet"
 var_filename="../weights/var.txt"
-validate=True
+validate=False
 check_perf_times=3
-check_perf_times_in_loop=0
+check_perf_times_in_loop=3
+loop_modulo = 20
 learn_rate = 1e-04
 #setup
 mol.init(im_path=path)
@@ -76,4 +84,5 @@ else:
 		Mod.save_weights()
 		model.fit_generator(train_generator, steps_per_epoch=steps, epochs=ep)
 
-		Mod.check_performance(train_generator, times=check_perf_times_in_loop)
+		if i%loop_modulo==0:
+			Mod.check_performance(train_generator, times=check_perf_times_in_loop)
