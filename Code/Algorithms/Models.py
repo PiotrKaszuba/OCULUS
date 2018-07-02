@@ -7,6 +7,7 @@ from keras.optimizers import *
 from keras.callbacks import ModelCheckpoint, LearningRateScheduler
 from keras import backend as keras
 import Code.Algorithms.Metrics as met
+import Code.Preprocessing.MergeChannels as mc
 class Models:
     row_multi = 16
     col_multi = 16
@@ -51,24 +52,38 @@ class Models:
         if numb > 0:
             self.model.load_weights(self.path + str(numb))
 
-    def metr(pred, true):
-        return met.customMetric(pred, true)
+    def centerDiffMetric(pred, x, y):
+        return met.centerDiff(pred,x,y)
 
-    def validate(self, pathForce=None):
 
+
+    def validate(self, pathForce=None, validateMode=0, onlyWithMetric = False, onlyWithoutMetric = False):
+        merge = mc.MergeChannels(True)
         while True:
             if pathForce == None:
                 path = self.validate_path_provider_func(start_path=self.validate_start_path)
             else:
                 path = pathForce
             for i in range(len(os.listdir(path)) - 2):
-                img = self.read_func(name=str(i), path=path, target_size=(self.colDim, self.rowDim), mode=self.mode)
+                true_path = path + 'mask/'
+                if onlyWithMetric and not os.path.exists(os.path.join(true_path, str(i) + '.jpg')):
+                    continue
+                else:
+                    if onlyWithoutMetric and os.path.exists(os.path.join(true_path, str(i) + '.jpg')):
+                        continue
+
+                im = self.read_func(name=str(i), path=path, target_size=(self.colDim, self.rowDim), mode=validateMode)
+                img = merge.Merge(im)
                 imgX = img.reshape((1, self.rowDim, self.colDim, self.channels))
-                imgX = imgX / 255
-                pred = self.model.predict(imgX)
+                imgX = imgX/255                pred = self.model.predict(imgX)
                 pred = pred.reshape((self.rowDim, self.colDim))
 
-                x = [img, pred]
+                if os.path.exists(os.path.join(true_path, str(i)+'.jpg')):
+                    true = self.read_func(name=str(i), path=true_path, target_size=(self.colDim, self.rowDim))
+                    print("Custom metric: " + str(met.customMetric(pred, true, check=False, toDraw=im)))
+                else:
+                    met.draw(pred,im)
+                x = [img, pred, im]
                 self.show_function(x)
 
     def check_performance(self, validate_generator, times=1):

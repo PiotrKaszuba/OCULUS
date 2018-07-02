@@ -635,11 +635,16 @@ def createImagesInRepoAfterFunctionOnPath(path, new_repo_path, function, target_
     createImagesRepo(base2+'/', name2)
     new_path = new_repo_path+image_path
 
+    maskList=None
+    if onlyMasked:
+        maskList = getCsvList(repo_path, False)
 
     for a in os.listdir(path):
         if not os.path.isfile(os.path.join(path, a)):
             continue
-        if onlyMasked and not os.path.isfile(os.path.join(path+'mask/', a)):
+        patient, date, eye = getPatientDateEye(image_path)
+
+        if onlyMasked and not os.path.isfile(os.path.join(path+'mask/', a)) and not checkIfExistsInCSV([patient, date,eye,a],list=maskList,image=False):
             continue
         name = a.split(".")[0]
         base_image = read_and_size(name, path=path, target_size=target_size)
