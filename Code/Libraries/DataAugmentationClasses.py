@@ -2,10 +2,11 @@ import keras.preprocessing.image as image
 from keras import backend as K
 import numpy as np
 import warnings
+import multiprocessing.pool
 import os
-
-
-
+from functools import partial
+import keras_preprocessing.image as kimage
+import scipy.ndimage as ndi
 
 def getAugmentationParams():
     return{
@@ -17,6 +18,39 @@ def getAugmentationParams():
         "rescale": 1. / 255,
         "fill_mode": 'constant'
     }
+def apply_transform(x,
+                    transform_matrix,
+                    channel_axis=0,
+                    fill_mode='nearest',
+                    cval=0.):
+    """Apply the image transformation specified by a matrix.
+
+    # Arguments
+        x: 2D numpy array, single image.
+        transform_matrix: Numpy array specifying the geometric transformation.
+        channel_axis: Index of axis for channels in the input tensor.
+        fill_mode: Points outside the boundaries of the input
+            are filled according to the given mode
+            (one of `{'constant', 'nearest', 'reflect', 'wrap'}`).
+        cval: Value used for points outside the boundaries
+            of the input if `mode='constant'`.
+
+    # Returns
+        The transformed version of the input.
+    """
+    x = np.rollaxis(x, channel_axis, 0)
+    final_affine_matrix = transform_matrix[:2, :2]
+    final_offset = transform_matrix[:2, 2]
+    channel_images = [ndi.interpolation.affine_transform(
+        x_channel,
+        final_affine_matrix,
+        final_offset,
+        order=0,
+        mode=fill_mode,
+        cval=cval) for x_channel in x]
+    x = np.stack(channel_images, axis=0)
+    x = np.rollaxis(x, 0, channel_axis + 1)
+    return x
 
 def _count_valid_files_in_directory_extension(directory, white_list_formats, follow_links):
     """Count files with extension in `white_list_formats` contained in a directory.
@@ -236,12 +270,12 @@ class ImageDataGeneratorExtension(image.ImageDataGenerator):
             if transform_matrix is not None:
                 hx, wx = x.shape[img_row_axis], x.shape[img_col_axis]
                 hy, wy = y.shape[img_row_axis], y.shape[img_col_axis]
-                transform_matrix_x = image.transform_matrix_offset_center(transform_matrix, hx, wx)
-                transform_matrix_y = image.transform_matrix_offset_center(transform_matrix, hy, wy)
-                x = image.apply_transform(x, transform_matrix_x, img_channel_axis,
+                transform_matrix_x = kimage.transform_matrix_offset_center(transform_matrix, hx, wx)
+                transform_matrix_y = kimage.transform_matrix_offset_center(transform_matrix, hy, wy)
+                x = apply_transform(x, transform_matrix_x, img_channel_axis,
                                     fill_mode=self.fill_mode, cval=self.cval)
 
-                y = image.apply_transform(y, transform_matrix_y, img_channel_axis,
+                y = apply_transform(y, transform_matrix_y, img_channel_axis,
                                       fill_mode=self.fill_mode, cval=self.cval)
 
             if self.channel_shift_range != 0:
@@ -251,13 +285,13 @@ class ImageDataGeneratorExtension(image.ImageDataGenerator):
 
             if self.horizontal_flip:
                 if np.random.random() < 0.5:
-                    x = image.flip_axis(x, img_col_axis)
-                    y= image.flip_axis(y, img_col_axis)
+                    x = kimage.flip_axis(x, img_col_axis)
+                    y= kimage.flip_axis(y, img_col_axis)
 
             if self.vertical_flip:
                 if np.random.random() < 0.5:
-                    x = image.flip_axis(x, img_row_axis)
-                    y = image.flip_axis(y, img_row_axis)
+                    x = kimage.flip_axis(x, img_row_axis)
+                    y = kimage.flip_axis(y, img_row_axis)
             return x, y
 class DirectoryIteratorExtension(image.Iterator):
 
@@ -320,8 +354,8 @@ class DirectoryIteratorExtension(image.Iterator):
         self.num_class = len(classes)
         self.class_indices = dict(zip(classes, range(len(classes))))
 
-        pool = image.multiprocessing.pool.ThreadPool()
-        function_partial = image.partial(_count_valid_files_in_directory_extension,
+        pool = multiprocessing.pool.ThreadPool()
+        function_partial = partial(_count_valid_files_in_directory_extension,
                                    white_list_formats=white_list_formats,
                                    follow_links=follow_links)
         self.samples = sum(pool.map(function_partial,

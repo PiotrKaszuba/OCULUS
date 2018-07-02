@@ -1,9 +1,15 @@
-#Keras 2.1.6 or 2.2
-#h5py 2.7.1
-#numpy 1.14.3
-#Python 3.6 or 3.5.3
+#Tensorflow_gpu 1.8.0
+#Keras 2.2
+#keras preprocessing 1.0.1
 #opencv_python 3.4.0.12
-#
+#Python 3.6 or 3.5.3
+#keras applications 1.0.2
+#scipy 1.0.1
+#skimage (feature LBP - nieznana wersja)
+
+
+
+
 
 from Code.Libraries import MyOculusLib as mol
 from Code.Algorithms import Models as md
@@ -14,7 +20,13 @@ from Code.Libraries import DataAugmentationClasses as dac
 base_path='../'
 image_size_level=20
 base_scale=0.75
-
+withMetricOrNo = 2
+onlyWithMetric = False
+onlyWithoutMetric = False
+if(withMetricOrNo == 1):
+	onlyWithMetric = True
+if (withMetricOrNo == 2):
+	onlyWithoutMetric = True
 batch_size = 32
 total_ep = 1000
 ep = 1
@@ -44,17 +56,18 @@ class_mode='mask'
 show_function = mol.model_show_function
 read_function = mol.read_and_size
 validate_path_provider_func = mol.random_path
-validate_start_path = base_path+'Images/valildate/'
-
+validate_start_path = base_path+'Images/awaiting/'
 filters=12
 
 load_weights=False
 weights_path="../weights/unet"
 var_filename="../weights/var.txt"
 validate=False
-check_perf_times=3
-check_perf_times_in_loop=3
+
+check_perf_times=0
+check_perf_times_in_loop=0
 loop_modulo = 20
+
 learn_rate = 1e-04
 #setup
 mol.init(im_path=path)
@@ -77,7 +90,7 @@ Mod.check_performance(train_generator, times=check_perf_times)
 
 #go
 if validate:
-	Mod.validate()
+	Mod.validate(onlyWithMetric=onlyWithMetric, onlyWithoutMetric=onlyWithoutMetric)
 else:
 	for i in range(total_ep):
 		print("ep:"+str(i))

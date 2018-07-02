@@ -23,7 +23,7 @@ class LocalBinaryPatterns:
 
             #plt.show()
 
-    def HistOnPath(self, path):
+    '''def HistOnPath(self, path):
         for i in range(len(os.listdir(path)) - 1):
             img = mol.read_and_size(str(i), path=path)
             lbp = self.pureLbp(img)
@@ -31,7 +31,7 @@ class LocalBinaryPatterns:
             (fig, ax) = plt.subplots()
             ax.hist(lbp.ravel(), normed=True, bins=np.arange(0, self.numPoints + 3), range=(0, self.numPoints + 2))
             ax.set_ylim([0, 0.030])
-            plt.show()
+            plt.show()'''
     def pureLbp(self, image):
         return feature.local_binary_pattern(image, self.numPoints,
                                            self.radius, method=self.method)

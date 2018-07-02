@@ -14,11 +14,12 @@ mer= mc.MergeChannels(equalize)
 #params
 repo_base="../../../Images/"
 repo_name="awaiting"
-new_name="valildate"
+new_name="validate"
+
 
 old_repo = repo_base+repo_name+'/'
 new_repo = repo_base + new_name+'/'
-level = 15
+level = 20
 scale = 0.75
 target_size= md.Models.getColsRows(level, scale)
 onlyMasked = False

@@ -28,7 +28,7 @@ class MergeChannels:
 
     def MergeOnPath(self, path):
         for i in range(len(os.listdir(path)) - 1):
-            img = mol.read_and_size(str(i), path=path)
+            img = mol.read_and_size(str(i), path=path, scale = 0.2)
             merged = self.Merge(img)
             mol.show(merged)
 
