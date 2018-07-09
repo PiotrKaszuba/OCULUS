@@ -13,8 +13,8 @@ mer= mc.MergeChannels(equalize)
 
 #params
 repo_base="../../../Images/"
-repo_name="awaiting"
-new_name="validate"
+repo_name="data"
+new_name="mergedv2"
 
 
 old_repo = repo_base+repo_name+'/'
@@ -22,7 +22,7 @@ new_repo = repo_base + new_name+'/'
 level = 20
 scale = 0.75
 target_size= md.Models.getColsRows(level, scale)
-onlyMasked = False
+onlyMasked = True
 override = True
 #go
 mol.createFromAllPathImageAfterFunction(old_repo,new_repo, mer.Merge, target_size=target_size, onlyMasked=onlyMasked, override=override)

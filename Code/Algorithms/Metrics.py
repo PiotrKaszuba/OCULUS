@@ -33,7 +33,7 @@ def draw(pred, toDraw, morph_iter=0, threshold = 127):
         M = cv2.moments(contours[ind])
         cx = int(M['m10'] / M['m00'])
         cy = int(M['m01'] / M['m00'])
-        if toDraw != None:
+        if toDraw is not None:
             cv2.drawContours(toDraw, contours, ind, (255, 255, 255), 2)
     except:
         cx = int(w / 2)

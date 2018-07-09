@@ -56,13 +56,13 @@ class_mode='mask'
 show_function = mol.model_show_function
 read_function = mol.read_and_size
 validate_path_provider_func = mol.random_path
-validate_start_path = base_path+'Images/awaiting/'
+validate_start_path = base_path+'Images/all/'
 filters=12
 
-load_weights=False
+load_weights=True
 weights_path="../weights/unet"
 var_filename="../weights/var.txt"
-validate=False
+validate=True
 
 check_perf_times=0
 check_perf_times_in_loop=0

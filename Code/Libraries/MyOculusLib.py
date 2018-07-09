@@ -7,7 +7,8 @@ import shutil
 import csv
 from functools import reduce
 import random
-
+import ctypes
+import textwrap
 ####### <   Globals >
 masks_done =0
 patients_done=0
@@ -143,7 +144,7 @@ def print_info(im):
           )
 
 
-def all_path(func,start_path=None, eye=None):
+def all_path(func,start_path=None, eye=None, once_per_date=False, dict=False):
     global patients_done
     if eye != 'left' and eye != 'right':
         eye='both'
@@ -152,7 +153,8 @@ def all_path(func,start_path=None, eye=None):
     if start_path==None:
         start_path=image_path
 
-
+    if dict:
+        dictionary = {}
     patient = os.listdir(start_path)
     max = len([a for a in patient if not os.path.isfile(os.path.join(start_path,a))])
     for i in range (max):
@@ -160,13 +162,26 @@ def all_path(func,start_path=None, eye=None):
 
         for j in range(len(date)):
             if eye == 'left':
-                func(start_path+patient[i]+'/'+date[j]+'/'+'left_eye_images/')
+                temp_val = func(start_path+patient[i]+'/'+date[j]+'/'+'left_eye_images/')
             if eye == 'right':
-                func(start_path + patient[i] + '/' + date[j] + '/' + 'right_eye_images/')
+                temp_val = func(start_path + patient[i] + '/' + date[j] + '/' + 'right_eye_images/')
             if eye == 'both':
-                func(start_path+patient[i]+'/'+date[j]+'/'+'left_eye_images/')
-                func(start_path + patient[i] + '/' + date[j] + '/' + 'right_eye_images/')
+                temp_val = func(start_path + patient[i] + '/' + date[j] + '/' + 'right_eye_images/')
+                temp_val = func(start_path+patient[i]+'/'+date[j]+'/'+'left_eye_images/')
+            if dict:
+                for key, value in temp_val.items():
+                    old = dictionary.get(key)
+                    if old is None:
+                        old = []
+                    old.append(value[0])
+                    dictionary[key] = old
+            if once_per_date:
+                break
         patients_done+=1
+        if dict:
+            for key, value in dictionary.items():
+                for val in value:
+                    print(val)
         print("patients: " +str(patients_done))
 def random_path(start_path=None, eye = None):
     if eye != 'left' and eye != 'right':
@@ -254,6 +269,46 @@ def read_and_size_with_copy( name, path=None, extension='.jpg', scale=0, mode=0,
 def trackback_callback(x):
     global track_val
     track_val = x
+def getScreenSize():
+    user32 = ctypes.windll.user32
+    return user32.GetSystemMetrics(0), user32.GetSystemMetrics(1)
+def concat_images(imList, imH=None,imW=None):
+    w, h = getScreenSize()
+    w = w+50
+    a,b,c = getWidthHeightChannels(imList[0])
+    if imH==None:
+        imH = b
+    if imW==None:
+        imW = a
+    cols = math.floor(w/imW)
+    images = len(imList)
+    rows = math.ceil(images/cols)
+    new_img = np.zeros(shape=(imH*rows, imW*cols), dtype=np.uint8)
+    for i in range(images):
+
+        currRow = math.floor(i/cols)
+        currCol = i - currRow * cols
+        new_img[currRow*imH:currRow*imH+imH, currCol*imW:currCol*imW+imW] = imList[i]
+
+    return new_img
+
+def show_joined_print(images, text, window=None):
+    global winname
+    if window == None:
+        window = winname
+    key = None
+    toprint=''
+    for key, val in text.items():
+        toprint+= val[0]
+    print('\n'.join(textwrap.wrap(toprint, 180, break_long_words=False)))
+    img = concat_images(images)
+    while 1:
+        cv2.imshow(window, img)
+
+        key =cv2.waitKey(30)
+        if key == ord('q'):
+            break
+
 
 def show(im, function_on_im=None, *args, other_im = [], function_on_other=None, print=False, window=None):
     global winname
@@ -469,6 +524,41 @@ def init(win='win', im_path = 'Images/all/', start_path='Images/all/', mouse_f=d
 init(im_path='')
 
 #<Init/>
+
+def get_description(path):
+    names = ["description1.txt",  "correct_icd_code.txt","age.txt", "sex.txt"]
+    text = ''
+    dict = {}
+    for name in names:
+
+        file = open(os.path.join(path,name), 'r', encoding='utf8')
+        dict[name] = [file.read()+'\n']
+        #text += file.read()+'\n'
+
+    return dict
+
+def get_description_full_path(path, imScale=0.15):
+    repo, image = getRepoPathAndImagePath(path)
+    patient, date, eye=getPatientDateEye(image)
+    list =[]
+    listWait=[]
+    for a in os.listdir(path):
+        if not os.path.isfile(os.path.join(path, a)):
+            continue
+
+
+        im = read_and_size(a, path, scale=imScale, extension='')
+        cv2.putText(im, str(a), (5, math.floor(np.shape(im)[0])-5), cv2.FONT_HERSHEY_SIMPLEX, 0.5,(255, 255, 255))
+        if (int(a[:-4]) > 9):
+            listWait.append(im)
+        else:
+            list.append(im)
+    for ele in listWait:
+        list.append(ele)
+    dict = get_description(os.path.join(repo,patient,date))
+    show_joined_print(list, dict)
+    return dict
+
 
 def delete_directories(lines_of_directories, path):
     list = lines_of_directories.split('\n')
