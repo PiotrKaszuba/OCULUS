@@ -4,11 +4,15 @@ import math
 import copy
 import os
 import shutil
+import re
 import csv
 from functools import reduce
 import random
 import ctypes
 import textwrap
+from difflib import SequenceMatcher
+import nltk
+import tkinter
 ####### <   Globals >
 masks_done =0
 patients_done=0
@@ -144,45 +148,166 @@ def print_info(im):
           )
 
 
-def all_path(func,start_path=None, eye=None, once_per_date=False, dict=False):
+
+
+def execute_for_path(func, path, eye, data_once_per_patient_eye_tuple):
+    if eye == 'left':
+        data = func(path + 'left_eye_images/')
+    if eye == 'right':
+        data = func(path + 'right_eye_images/')
+    if eye == 'both':
+        data2 = func(path + 'right_eye_images/')
+        data = func(path + 'left_eye_images/')
+
+        if data_once_per_patient_eye_tuple[1]:
+            data = save_data(data, data2, True)
+    return data
+
+def save_data(dictionary, data, collect_data):
+    if collect_data:
+        for key, value in data.items():
+            old = dictionary.get(key)
+            if old is None:
+                old = []
+            for item in value:
+                old.append(item)
+            dictionary[key] = old
+    return dictionary
+
+def iterate_paths(func, start_path, eye, data_once_per_patient_eye_tuple, collect_data, patient, max, dictionary):
     global patients_done
-    if eye != 'left' and eye != 'right':
-        eye='both'
-
-    patient = None
-    if start_path==None:
-        start_path=image_path
-
-    if dict:
-        dictionary = {}
-    patient = os.listdir(start_path)
-    max = len([a for a in patient if not os.path.isfile(os.path.join(start_path,a))])
     for i in range (max):
         date = os.listdir(start_path + patient[i] + "/")
 
         for j in range(len(date)):
-            if eye == 'left':
-                temp_val = func(start_path+patient[i]+'/'+date[j]+'/'+'left_eye_images/')
-            if eye == 'right':
-                temp_val = func(start_path + patient[i] + '/' + date[j] + '/' + 'right_eye_images/')
-            if eye == 'both':
-                temp_val = func(start_path + patient[i] + '/' + date[j] + '/' + 'right_eye_images/')
-                temp_val = func(start_path+patient[i]+'/'+date[j]+'/'+'left_eye_images/')
-            if dict:
-                for key, value in temp_val.items():
-                    old = dictionary.get(key)
-                    if old is None:
-                        old = []
-                    old.append(value[0])
-                    dictionary[key] = old
-            if once_per_date:
+            path = start_path+patient[i]+'/'+date[j]+'/'
+            data = execute_for_path(func, path, eye, data_once_per_patient_eye_tuple)
+            dictionary = save_data(dictionary, data, collect_data)
+            if data_once_per_patient_eye_tuple[0]:
                 break
         patients_done+=1
-        if dict:
-            for key, value in dictionary.items():
-                for val in value:
-                    print(val)
         print("patients: " +str(patients_done))
+    return dictionary
+
+def count_n_grams(value):
+    for val in value:
+        splitted = re.findall(r"[\w']+", val)
+        ngrams = nltk.ngrams(splitted, 4)
+
+def split_to_words(temp_dict, val):
+    splitted = re.findall(r"[\w']+", val)
+    for split in splitted:
+        temp_dict = increment_dict(temp_dict, split)
+    return temp_dict
+
+def increment_dict(temp_dict, val):
+    old_count = temp_dict.get(val)
+    if old_count == None:
+        old_count = 0
+    temp_dict[val] = old_count + 1
+    return temp_dict
+
+
+def map_chain(mapping_dict, word, word2, rate):
+    word_mapping = mapping_dict.get(word)
+    while word_mapping is not None:
+        word = word_mapping[0]
+        word_mapping = mapping_dict.get(word)
+    mapping_dict[word2] = (word, rate)
+    return mapping_dict
+
+def merge_mapping(sorted_list, ratio):
+    mapping_dict = {}
+    for i in range(len(sorted_list)):
+        word = sorted_list[i][0]
+        print("merge mapping: " + str(i))
+        for j in range(i+1, len(sorted_list)):
+            word2 = sorted_list[j][0]
+            rate = similar(word, word2)
+            need_ratio = ratio + 0.015 * len(word2)
+            if rate > need_ratio:
+                temp_mapping = mapping_dict.get(word2)
+                if (temp_mapping is not None and rate > temp_mapping[1]) or temp_mapping is None:
+                    mapping_dict = map_chain(mapping_dict, word, word2, rate)
+    return mapping_dict
+
+def save_mapping_to_csv(merge_mapping):
+    sorted_by_value = sorted(merge_mapping.items(), key=lambda kv: kv[1][1], reverse=True)
+    csvFile = open("merge_mapping.csv", 'w', newline="")
+    writer = csv.writer(csvFile)
+    writer.writerow(["mapped", "to", "ratio"])
+    for value in sorted_by_value:
+        writer.writerow([value[0], value[1][0], value[1][1]])
+    csvFile.close()
+
+def process_data(dictionary, collect_data, data_process_keys):
+    if collect_data:
+        if data_process_keys != None:
+            key_names = ["ignore_keys", "merge_keys", "n_gram_keys", "split_to_words_keys", "merge_mapping_keys"]
+            dict_keys = {}
+            for name in key_names:
+                temp = data_process_keys.get(name)
+                if temp is None:
+                    temp = []
+                dict_keys[name] = temp
+
+            total_dict = {}
+            #type data and data
+            for key, value in dictionary.items():
+                operations_done = []
+                if key in dict_keys.get("ignore_keys"):
+                    continue
+                #if key in dict_keys.get("n_gram_keys"):
+                #    count_n_grams(value)
+                temp_dict = {}
+                #val is piece of data
+                for val in value:
+                    if key in dict_keys.get("split_to_words_keys"):
+                        #increments inside
+                        temp_dict = split_to_words(temp_dict, val)
+                        operations_done.append("split_to_words_keys")
+                    else:
+                        temp_dict = increment_dict(temp_dict, val)
+
+
+                sorted_by_value = sorted(temp_dict.items(), key=lambda kv: kv[1], reverse=True)
+                if key in dict_keys.get("merge_mapping_keys"):
+                    merge_mapping_dict = merge_mapping(sorted_by_value, data_process_keys.get("merge_mapping_keys_ratio"))
+                    operations_done.append("merge_mapping_keys")
+                    if data_process_keys.get("merge_mapping_keys_save"):
+                        save_mapping_to_csv(merge_mapping_dict)
+                total_dict[key] = sorted_by_value
+            print_total_dict(total_dict)
+            return total_dict
+    return dictionary
+
+def all_path(func,start_path=None, eye=None, data_once_per_patient_eye_tuple=(False, False), collect_data=False, data_process_keys= None):
+
+    if eye != 'left' and eye != 'right':
+        eye='both'
+
+    if start_path==None:
+        start_path=image_path
+
+    dictionary = {}
+    patient = os.listdir(start_path)
+    max = len([a for a in patient if not os.path.isfile(os.path.join(start_path,a))])
+
+    dictionary = iterate_paths(func, start_path, eye, data_once_per_patient_eye_tuple, collect_data, patient, max, dictionary)
+    dictionary = process_data(dictionary,collect_data,data_process_keys)
+
+def print_total_dict(dict, key=None):
+    print("Counts:")
+    if key==None:
+        for key, value in dict.items():
+            print(key)
+            for val, count in value:
+                print(val+": " + str(count))
+    else:
+        print(key)
+        for val, count in dict.get(key):
+            print(val + ": " + str(count))
+
 def random_path(start_path=None, eye = None):
     if eye != 'left' and eye != 'right':
         if np.random.randint(0,2) ==0:
@@ -527,36 +652,42 @@ init(im_path='')
 
 def get_description(path):
     names = ["description1.txt",  "correct_icd_code.txt","age.txt", "sex.txt"]
-    text = ''
+
     dict = {}
     for name in names:
 
+
         file = open(os.path.join(path,name), 'r', encoding='utf8')
-        dict[name] = [file.read()+'\n']
+
+        text = [file.read().lower()]
+        if name == names[1]:
+            text[0] = text[0][2:]
+        dict[name] = text
         #text += file.read()+'\n'
 
     return dict
 
-def get_description_full_path(path, imScale=0.15):
+def get_description_full_path(path, imSize=(240,180), showImages=False):
     repo, image = getRepoPathAndImagePath(path)
     patient, date, eye=getPatientDateEye(image)
     list =[]
     listWait=[]
-    for a in os.listdir(path):
-        if not os.path.isfile(os.path.join(path, a)):
-            continue
+    if showImages:
+        for a in os.listdir(path):
+            if not os.path.isfile(os.path.join(path, a)):
+                continue
 
 
-        im = read_and_size(a, path, scale=imScale, extension='')
-        cv2.putText(im, str(a), (5, math.floor(np.shape(im)[0])-5), cv2.FONT_HERSHEY_SIMPLEX, 0.5,(255, 255, 255))
-        if (int(a[:-4]) > 9):
-            listWait.append(im)
-        else:
-            list.append(im)
-    for ele in listWait:
-        list.append(ele)
+            im = read_and_size(a, path, target_size=imSize, extension='')
+            cv2.putText(im, str(a), (5, math.floor(np.shape(im)[0])-5), cv2.FONT_HERSHEY_SIMPLEX, 0.5,(255, 255, 255))
+            if (int(a[:-4]) > 9):
+                listWait.append(im)
+            else:
+                list.append(im)
+        for ele in listWait:
+            list.append(ele)
     dict = get_description(os.path.join(repo,patient,date))
-    show_joined_print(list, dict)
+    #show_joined_print(list, dict)
     return dict
 
 
@@ -1100,10 +1231,84 @@ def square_circle_on_1_2_in_path(path):
             cv2.circle(im_cp, (cx,cy), r)
 
             show(im_cp)'''
-
-
+'''def mergeListSimilarKeysTuples(dict, ratio=0.88):
+    new_dict = []
+    for i in range(len(dict)):
+        key = dict[i][0]
+        sum = dict[i][1]
+        print(str(i))
+        for j in range(i+1, len(dict)):
+            key2=dict[j][0]
+            if key == key2:
+                continue
+            rate = similar(key, key2)
+            if rate > ratio:
+                sum += dict[j][1]
+                dict[j] = (key2, 0)
+        new_dict.append((key, sum))
+    return new_dict
+'''
+def similar(a, b):
+    return SequenceMatcher(None, a, b).ratio()
 def model_show_function(x):
     y=[]
     for i in range(len(x)-1):
         y.append(x[i+1])
     show(x[0], other_im=y)
+
+def user_gui_accept(row):
+
+
+    return True
+
+def choose_mappings(path_read="merge_mapping.csv", path_write = "accepted_mapping.csv", header=["mapped", "to", "ratio"]):
+    root = tkinter.Tk()
+    root.geometry("400x200")
+    root.title = "accept?"
+    global accept_row, var_mapped, var_to, var_ratio
+
+
+    csv_read = open(path_read, 'r', newline="")
+    accept_reader = csv.reader(csv_read)
+    next(accept_reader, None)
+    accept_row = next(accept_reader, None)
+
+    var_mapped = tkinter.StringVar()
+    var_to = tkinter.StringVar()
+    var_ratio = tkinter.StringVar()
+    mapped_label = tkinter.Label(root, textvariable=var_mapped, relief=tkinter.RAISED )
+    mapped_label.pack()
+    to_label = tkinter.Label(root, textvariable=var_to, relief=tkinter.RAISED)
+    to_label.pack()
+    ratio_label = tkinter.Label(root, textvariable=var_ratio, relief=tkinter.RAISED)
+    ratio_label.pack()
+    def reload_gui():
+        global accept_row, var_mapped, var_to, var_ratio
+        var_mapped.set("Mapowany: " +accept_row[0])
+        var_to.set("Do bazowego: " +accept_row[1])
+        var_ratio.set("Ratio: "  + accept_row[2])
+    def new_row():
+        global accept_row
+        accept_row = next(accept_reader, None)
+
+
+    def accept():
+        writeToCsv(path_write, header, accept_row)
+        new_row()
+        reload_gui()
+
+    def reject():
+        new_row()
+        reload_gui()
+
+    reload_gui()
+    accept_button = tkinter.Button(root, text="accept", command=accept, height=4, width=20)
+    reject_button = tkinter.Button(root, text="reject", command=reject, height=4, width=20)
+
+    accept_button.pack()
+    reject_button.pack()
+
+
+    root.mainloop()
+    csv_read.close()
+
