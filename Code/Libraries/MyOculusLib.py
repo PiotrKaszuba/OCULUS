@@ -1330,6 +1330,59 @@ def delete_low_frequency_words(counts):
     filtered = filter(lambda x: x[1] >= 10, counts)
     return filtered
 
+def choose_words(path_read="description1.txt.csv", path_accept = "accepted_words.csv", path_reject="rejected_words.csv", header=["value", "count"]):
+    root = tkinter.Tk()
+    root.geometry("400x200")
+    root.title = "Accept words"
+    global accept_row, var_word, var_count
+
+    csv_read = open(path_read, 'r', newline="")
+    accept_reader = csv.reader(csv_read)
+
+    def new_row():
+        global accept_row
+        accept_row = next(accept_reader, None)
+
+    next(accept_reader, None)
+
+    new_row()
+
+    var_word = tkinter.StringVar()
+    var_count = tkinter.StringVar()
+
+    word_label = tkinter.Label(root, textvariable=var_word, relief=tkinter.RAISED)
+    word_label.pack()
+    count_label = tkinter.Label(root, textvariable=var_count, relief=tkinter.RAISED)
+    count_label.pack()
+
+    def reload_gui():
+        global accept_row, var_word, var_count
+        var_word.set("Słowo: " +accept_row[0])
+        var_count.set("Ilość: " +accept_row[1])
+
+
+
+
+    def accept():
+        writeToCsv(path_accept, header, accept_row)
+        new_row()
+        reload_gui()
+
+    def reject():
+        writeToCsv(path_reject, header, accept_row)
+        new_row()
+        reload_gui()
+
+    reload_gui()
+    accept_button = tkinter.Button(root, text="accept", command=accept, height=4, width=20)
+    reject_button = tkinter.Button(root, text="reject", command=reject, height=4, width=20)
+
+    accept_button.pack()
+    reject_button.pack()
+
+    root.mainloop()
+    csv_read.close()
+
 def choose_mappings(path_read="merge_mapping.csv", path_accept = "accepted_mapping.csv", path_reject="rejected_mapping.csv", header=["mapped", "to", "ratio"]):
     root = tkinter.Tk()
     root.geometry("400x200")
