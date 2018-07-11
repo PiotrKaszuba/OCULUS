@@ -200,24 +200,38 @@ def split_to_words(temp_dict, val):
         temp_dict = increment_dict(temp_dict, split)
     return temp_dict
 
-def increment_dict(temp_dict, val):
+def increment_dict(temp_dict, val, by=1):
     old_count = temp_dict.get(val)
     if old_count == None:
         old_count = 0
-    temp_dict[val] = old_count + 1
+    temp_dict[val] = old_count + by
     return temp_dict
 
 
-def map_chain(mapping_dict, word, word2, rate):
+def map_chain(mapping_dict, word, word2, rate, rejected_list=[]):
+    word_list = [word]
     word_mapping = mapping_dict.get(word)
     while word_mapping is not None:
         word = word_mapping[0]
+        if word not in word_list:
+            word_list.append(word)
+        else:
+            break
+
         word_mapping = mapping_dict.get(word)
-    mapping_dict[word2] = (word, rate)
+
+    for loop_word in reversed(word_list):
+        if (word2, loop_word) not in rejected_list:
+            if mapping_dict.get(loop_word) == word2 or loop_word == word:
+                break
+            mapping_dict[word2] = (loop_word, rate)
+            break
     return mapping_dict
 
-def merge_mapping(sorted_list, ratio):
+def merge_mapping(sorted_list, ratio, accepted_list=[], rejected_list=[]):
     mapping_dict = {}
+    for (mapped, to) in accepted_list:
+        mapping_dict[mapped] = (to, 1.0)
     for i in range(len(sorted_list)):
         word = sorted_list[i][0]
         print("merge mapping: " + str(i))
@@ -228,22 +242,48 @@ def merge_mapping(sorted_list, ratio):
             if rate > need_ratio:
                 temp_mapping = mapping_dict.get(word2)
                 if (temp_mapping is not None and rate > temp_mapping[1]) or temp_mapping is None:
-                    mapping_dict = map_chain(mapping_dict, word, word2, rate)
+                    mapping_dict = map_chain(mapping_dict, word, word2, rate, rejected_list)
     return mapping_dict
 
-def save_mapping_to_csv(merge_mapping):
+def save_mapping_to_csv(merge_mapping, path):
     sorted_by_value = sorted(merge_mapping.items(), key=lambda kv: kv[1][1], reverse=True)
-    csvFile = open("merge_mapping.csv", 'w', newline="")
+    csvFile = open(path, 'w', newline="")
     writer = csv.writer(csvFile)
     writer.writerow(["mapped", "to", "ratio"])
     for value in sorted_by_value:
         writer.writerow([value[0], value[1][0], value[1][1]])
     csvFile.close()
 
+def get_csv_reader(path):
+    csvFile = open(path, 'r', newline="")
+    reader = csv.reader(csvFile)
+    next(reader, None)
+    return reader
+
+def load_mapping_from_csv(path):
+    mapping_dict = {}
+    csvFile = open(path, 'r', newline="")
+    reader = csv.reader(csvFile)
+    next(reader, None)
+    for row in reader:
+        mapping_dict[row[0]] = (row[1], row[2])
+    csvFile.close()
+    return mapping_dict
+
+def load_accepted_rejected(path):
+    load_list = []
+    try:
+        reader = get_csv_reader(path)
+        for row in reader:
+            load_list.append((row[0], row[1]))
+    except:
+        return load_list
+    return load_list
+
 def process_data(dictionary, collect_data, data_process_keys):
     if collect_data:
         if data_process_keys != None:
-            key_names = ["ignore_keys", "merge_keys", "n_gram_keys", "split_to_words_keys", "merge_mapping_keys"]
+            key_names = ["ignore_keys", "merge_keys", "n_gram_keys", "split_to_words_keys", "merge_mapping_keys", "save_total_keys"]
             dict_keys = {}
             for name in key_names:
                 temp = data_process_keys.get(name)
@@ -272,12 +312,26 @@ def process_data(dictionary, collect_data, data_process_keys):
 
                 sorted_by_value = sorted(temp_dict.items(), key=lambda kv: kv[1], reverse=True)
                 if key in dict_keys.get("merge_mapping_keys"):
-                    merge_mapping_dict = merge_mapping(sorted_by_value, data_process_keys.get("merge_mapping_keys_ratio"))
+                    merge_path = data_process_keys.get("merge_mapping_keys_path")
+                    load_mapping = data_process_keys.get("merge_mapping_keys_load")
+                    accepted_list = load_accepted_rejected(data_process_keys.get("merge_mapping_keys_accepted_path"))
+                    rejected_list = load_accepted_rejected(data_process_keys.get("merge_mapping_keys_rejected_path"))
+                    if not load_mapping:
+                        merge_mapping_dict = merge_mapping(sorted_by_value, data_process_keys.get("merge_mapping_keys_ratio"), accepted_list=accepted_list, rejected_list=rejected_list)
+                    else:
+                        merge_mapping_dict = load_mapping_from_csv(merge_path)
                     operations_done.append("merge_mapping_keys")
-                    if data_process_keys.get("merge_mapping_keys_save"):
-                        save_mapping_to_csv(merge_mapping_dict)
+                    if data_process_keys.get("merge_mapping_keys_save") and not load_mapping:
+                        save_mapping_to_csv(merge_mapping_dict,merge_path )
+
+                    for mapped, to_and_ratio in merge_mapping_dict.items():
+                        mapped_count = temp_dict.pop(mapped, None)
+                        increment_dict(temp_dict, to_and_ratio[0], mapped_count)
+
+                    sorted_by_value = sorted(temp_dict.items(), key=lambda kv: kv[1], reverse=True)
+
                 total_dict[key] = sorted_by_value
-            print_total_dict(total_dict)
+            save_total_dict('', total_dict, dict_keys.get("save_total_keys"))
             return total_dict
     return dictionary
 
@@ -296,17 +350,23 @@ def all_path(func,start_path=None, eye=None, data_once_per_patient_eye_tuple=(Fa
     dictionary = iterate_paths(func, start_path, eye, data_once_per_patient_eye_tuple, collect_data, patient, max, dictionary)
     dictionary = process_data(dictionary,collect_data,data_process_keys)
 
-def print_total_dict(dict, key=None):
-    print("Counts:")
-    if key==None:
-        for key, value in dict.items():
+
+def save_total_dict(path, dict, keys=[], to_print=True):
+    if to_print:
+        print("Counts:")
+    for key, value in dict.items():
+        if key not in keys:
+            continue
+        if to_print:
             print(key)
-            for val, count in value:
+        name = path+key+'.csv'
+        header = ['value', 'count']
+        writeToCsv(name, header, None, overwrite=True)
+        value = delete_low_frequency_words(value)
+        for val, count in value:
+            if to_print:
                 print(val+": " + str(count))
-    else:
-        print(key)
-        for val, count in dict.get(key):
-            print(val + ": " + str(count))
+            writeToCsv(name, header, [val, count])
 
 def random_path(start_path=None, eye = None):
     if eye != 'left' and eye != 'right':
@@ -895,18 +955,19 @@ def getWidthHeightChannels(image):
     if len(x) == 3:
         return x[1], x[0], x[2]
 
-def writeToCsv(path, header, row):
+def writeToCsv(path, header, row, overwrite=False):
 
-    if not os.path.isfile(path):
+    if (not os.path.isfile(path)) or overwrite:
         csvFile = open(path, 'w', newline="")
         writer = csv.writer(csvFile)
         writer.writerow(header)
         csvFile.close()
 
-    csvFile = open(path, 'a', newline="")
-    writer = csv.writer(csvFile)
-    writer.writerow(row)
-    csvFile.close()
+    if row is not None:
+        csvFile = open(path, 'a', newline="")
+        writer = csv.writer(csvFile)
+        writer.writerow(row)
+        csvFile.close()
 
 def registerImageCsv(repo_path, image_path, image_name, image, function):
     patient, date, eye = getPatientDateEye(image_path)
@@ -1256,23 +1317,36 @@ def model_show_function(x):
         y.append(x[i+1])
     show(x[0], other_im=y)
 
-def user_gui_accept(row):
 
 
-    return True
+def load_counts(path, key):
+    counts = []
+    reader = get_csv_reader(path+key+'.csv')
+    for row in reader:
+        counts.append((row[0], row[1]))
+    return counts
 
-def choose_mappings(path_read="merge_mapping.csv", path_write = "accepted_mapping.csv", header=["mapped", "to", "ratio"]):
+def delete_low_frequency_words(counts):
+    filtered = filter(lambda x: x[1] >= 10, counts)
+    return filtered
+
+def choose_mappings(path_read="merge_mapping.csv", path_accept = "accepted_mapping.csv", path_reject="rejected_mapping.csv", header=["mapped", "to", "ratio"]):
     root = tkinter.Tk()
     root.geometry("400x200")
-    root.title = "accept?"
+    root.title = "Accept mappings"
     global accept_row, var_mapped, var_to, var_ratio
 
 
     csv_read = open(path_read, 'r', newline="")
     accept_reader = csv.reader(csv_read)
+    def new_row():
+        global accept_row
+        accept_row = next(accept_reader, None)
+        while accept_row[2] == '1.0':
+            accept_row = next(accept_reader,None)
     next(accept_reader, None)
-    accept_row = next(accept_reader, None)
 
+    new_row()
     var_mapped = tkinter.StringVar()
     var_to = tkinter.StringVar()
     var_ratio = tkinter.StringVar()
@@ -1287,17 +1361,16 @@ def choose_mappings(path_read="merge_mapping.csv", path_write = "accepted_mappin
         var_mapped.set("Mapowany: " +accept_row[0])
         var_to.set("Do bazowego: " +accept_row[1])
         var_ratio.set("Ratio: "  + accept_row[2])
-    def new_row():
-        global accept_row
-        accept_row = next(accept_reader, None)
+
 
 
     def accept():
-        writeToCsv(path_write, header, accept_row)
+        writeToCsv(path_accept, header, accept_row)
         new_row()
         reload_gui()
 
     def reject():
+        writeToCsv(path_reject, header, accept_row)
         new_row()
         reload_gui()
 
