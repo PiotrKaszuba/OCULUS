@@ -1,3 +1,5 @@
-.idea
-Images
+venv/
+.idea/
+Images/**/D_*/
 *.pyc
+Images/
