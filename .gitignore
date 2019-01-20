@@ -2,3 +2,6 @@ venv/
 .idea/
 Images/**/D_*/
 *.pyc
+weights/
+!weights/_*
+Images/
