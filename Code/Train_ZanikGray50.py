@@ -8,16 +8,16 @@
 # skimage (feature LBP - nieznana wersja)
 
 
+from Code.Algorithms import Models as md
 from Code.Libraries import MyOculusImageLib as moil
 from Code.Libraries import MyOculusRepoNav as morn
-from Code.Algorithms import Models as md
 from Code.Preprocessing import DataAugmentationClasses as dac
-
+from Code.Preprocessing import MergeChannels as mc
 # params
 base_path = '../'
 image_size_level = 20
 base_scale = 0.75
-withMetricOrNo = 0
+withMetricOrNo = 1
 onlyWithMetric = False
 onlyWithoutMetric = False
 if withMetricOrNo == 1:
@@ -44,7 +44,10 @@ else:
 # data augmentation
 aug = dac.getAugmentationParams()
 
-path = base_path + 'Images/repo2/'
+FeatureName= "Zanik"
+TrainModeName = FeatureName+"Gray50"
+
+path = base_path + 'Images/'+TrainModeName+'/'
 
 class_mode = 'mask'
 
@@ -52,19 +55,22 @@ class_mode = 'mask'
 show_function = md.Models.model_show_function
 read_function = moil.read_and_size
 validate_path_provider_func = morn.random_path
-validate_start_path = base_path + 'Images/repo3/'
+validate_start_path = base_path + 'Images/'+FeatureName+'Validate/'
 filters = 12
 
 load_weights = True
-weights_path = "../weights/unetZanik"
-var_filename = "../weights/varZanik.txt"
+weights_path = "../weights/unet"+TrainModeName
+var_filename = "../weights/var"+TrainModeName+".txt"
 validate = False
+#mer = mc.MergeChannels(True)
+validatePreprocessFunc = lambda x:x
+draw = False
 
 check_perf_times = 5
 check_perf_times_in_loop = 0
 loop_modulo = 1
 
-learn_rate = 1e-04
+learn_rate = 3e-04
 # setup
 f = dac.ImageDataGeneratorExtension(rotation_range=aug['rotation_range'],
                                     width_shift_range=aug['width_shift_range'],
@@ -88,7 +94,7 @@ Mod.check_performance(train_generator, times=check_perf_times)
 
 # go
 if validate:
-    Mod.validate(onlyWithMetric=onlyWithMetric, onlyWithoutMetric=onlyWithoutMetric)
+    Mod.validate(validateMode=mode, preprocessFunc=validatePreprocessFunc, draw=draw, onlyWithMetric=onlyWithMetric, onlyWithoutMetric=onlyWithoutMetric)
 else:
     for i in range(total_ep):
         print("ep:" + str(i))

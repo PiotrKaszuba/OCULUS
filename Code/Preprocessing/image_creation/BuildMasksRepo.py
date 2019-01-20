@@ -1,11 +1,14 @@
-import Code.Libraries.MyOculusCsvLib as mocl
-import Code.Libraries.MyOculusRepoNav as morn
-import shutil
 import csv
 import math
+import shutil
+from functools import reduce
+
 import cv2
 import numpy as np
-from functools import reduce
+
+import Code.Libraries.MyOculusCsvLib as mocl
+import Code.Libraries.MyOculusRepoNav as morn
+
 
 # Creates masks for image shape in new repo based on imageData and maskData in repo (for every image search if there was mask)
 class BuildMasksRepo:

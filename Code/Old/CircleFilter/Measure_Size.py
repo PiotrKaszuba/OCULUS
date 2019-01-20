@@ -1,8 +1,10 @@
+import os
+
 import cv2
 import numpy as np
-import os
-import Code.Old.CircleFilter.CircleFilter as cf
+
 import Code.Libraries.MyOculusImageLib as moil
+import Code.Old.CircleFilter.CircleFilter as cf
 
 path = "../../Images/all/"
 
@@ -34,15 +36,19 @@ def square_circle_on_1_2_in_path(path):
 
             cv2.circle(im_cp, (cx, cy), r)
 
+
 def trackback_callback(x):
     global track_val
     track_val = x
 
-def track(name, max, start =0, win='win'):
+
+def track(name, max, start=0, win='win'):
     cv2.createTrackbar(name, win, start, max, trackback_callback)
+
 
 def get_track(name, win='win'):
     return cv2.getTrackbarPos(name, win)
+
 
 for i in range(get_number_of_images_in_path(path)):
 

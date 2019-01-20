@@ -1,22 +1,20 @@
-import cv2
-import numpy as np
 import copy
 
+import cv2
+import numpy as np
 
 
-
-@staticmethod
 def getColsRows(level, base_scale, use_col=True):
     row_multi = 16
     col_multi = 16
     if use_col:
         cols = int(col_multi * level)
-        rows = int(round(level*base_scale)*row_multi)
+        rows = int(round(level * base_scale) * row_multi)
     else:
         rows = int(row_multi * level)
         cols = int(round(level * base_scale) * col_multi)
 
-    return cols,rows
+    return cols, rows
 
 
 def getWidthHeightChannels(image):
@@ -59,7 +57,6 @@ def print_info(im):
           + str(h) + ", width: " + str(w)
           + ", h/w: " + str(h / w)
           )
-
 
 
 # modify proportion of height / width of img

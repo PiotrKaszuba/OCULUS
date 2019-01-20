@@ -1,12 +1,12 @@
-import os
 import csv
+import os
+
 import Code.Libraries.MyOculusImageLib as moil
 import Code.Libraries.MyOculusRepoNav as morn
 
 
 def getMaskHeader():
     return ['patient', 'date', 'eye', 'name', 'width', 'height', 'x', 'y', 'r']
-
 
 
 def writeToCsv(path, header, row, overwrite=False):
@@ -32,12 +32,13 @@ def registerImageCsv(repo_path, image_path, image_name, image, function):
     writeToCsv(repo_path + "imageData.csv", header, row)
 
 
-def getCsvList(repo_path, image=True):
+def getCsvList(repo_path, image=True, name=None):
     list = []
-    if image:
-        name = "imageData.csv"
-    else:
-        name = "maskData.csv"
+    if name is None:
+        if image:
+            name = "imageData.csv"
+        else:
+            name = "maskData.csv"
     with open(repo_path + name, 'r') as f:
         reader = csv.reader(f)
         next(reader, None)
