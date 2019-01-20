@@ -1,11 +1,12 @@
-import keras.preprocessing.image as image
-from keras import backend as K
-import numpy as np
 import multiprocessing.pool
 import os
 from functools import partial
+
+import keras.preprocessing.image as image
 import keras_preprocessing.image as kimage
+import numpy as np
 import scipy.ndimage as ndi
+from keras import backend as K
 
 
 def getAugmentationParams():
@@ -78,7 +79,7 @@ def _count_valid_files_in_directory_extension(directory, white_list_formats, fol
             for extension in white_list_formats:
                 if fname.lower().endswith(
                         '.' + extension) and "registration" not in root and "mask" not in root and os.path.isfile(
-                        root + "\\mask\\" + fname):
+                    root + "\\mask\\" + fname):
                     is_valid = True
                     break
             if is_valid:
@@ -117,7 +118,7 @@ def _list_valid_filenames_in_directory_extension(directory, white_list_formats,
             for extension in white_list_formats:
                 if fname.lower().endswith(
                         '.' + extension) and "registration" not in root and "mask" not in root and os.path.isfile(
-                        root + "\\mask\\" + fname):
+                    root + "\\mask\\" + fname):
                     is_valid = True
                     break
             if is_valid:
@@ -402,7 +403,7 @@ class DirectoryIteratorExtension(image.Iterator):
                 fname = "\\".join(words)
                 img2 = image.load_img(os.path.join(self.directory, fname),
                                       grayscale=True,
-                                      #todo - cant read more than one channel for label though there is parameter channels_out
+                                      # todo - cant read more than one channel for label though there is parameter channels_out
                                       target_size=self.target_size)
                 y = image.img_to_array(img2, data_format=self.data_format)
                 x, y = self.image_data_generator.random_transform_extension(x, y)

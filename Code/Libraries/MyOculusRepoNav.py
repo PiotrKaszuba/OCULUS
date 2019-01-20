@@ -1,7 +1,8 @@
 import os
-import numpy as np
 from functools import reduce
+
 import cv2
+import numpy as np
 
 
 def getPatientDateEye(image_path):
