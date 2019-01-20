@@ -1,7 +1,7 @@
 import copy as cp
-import math
 
 import cv2
+import math
 import numpy as np
 
 import Code.Libraries.MyOculusImageLib as moil
@@ -188,3 +188,14 @@ def customMetric(pred, true, check=False, toDraw=None):
     bin = binaryDiff(pred, true, check=check)
     cent = centerDiff(pred, true, check=check, toDraw=toDraw)
     return [bin, cent]
+
+
+def jaccard_index(ground_truth, prediction):
+    intersection = np.logical_and(ground_truth, prediction)
+    union = np.logical_or(ground_truth, prediction)
+    return np.sum(intersection) / np.sum(union)
+
+
+def dice_coefficient(ground_truth, prediction):
+    intersection = np.logical_and(ground_truth, prediction)
+    return (2 * np.sum(intersection)) / (np.sum(ground_truth) + np.sum(prediction))
