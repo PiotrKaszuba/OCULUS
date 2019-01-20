@@ -2,4 +2,3 @@ venv/
 .idea/
 Images/**/D_*/
 *.pyc
-Images/
