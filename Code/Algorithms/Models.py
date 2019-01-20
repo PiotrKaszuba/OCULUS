@@ -1,27 +1,20 @@
 import os
-# os.environ["CUDA_VISIBLE_DEVICES"] = "0"
-import numpy as np
+#os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 from keras.models import *
-from keras.layers import Input, concatenate, Conv2D, MaxPooling2D, UpSampling2D, Dropout, Cropping2D
+from keras.layers import Input, concatenate, Conv2D, MaxPooling2D, UpSampling2D, Dropout
 from keras.optimizers import *
-from keras.callbacks import ModelCheckpoint, LearningRateScheduler
-from keras import backend as keras
 import Code.Algorithms.Metrics as met
 import Code.Preprocessing.MergeChannels as mc
+import Code.Libraries.MyOculusImageLib as moil
 class Models:
-    row_multi = 16
-    col_multi = 16
+
 
     @staticmethod
-    def getColsRows(level, base_scale, use_col=True):
-        if use_col:
-            cols = int(Models.col_multi * level)
-            rows = int(round(level*base_scale)*Models.row_multi)
-        else:
-            rows = int(Models.row_multi * level)
-            cols = int(round(level * base_scale) * Models.col_multi)
-
-        return cols,rows
+    def model_show_function(x):
+        y = []
+        for i in range(len(x) - 1):
+            y.append(x[i + 1])
+        moil.show(x[0], other_im=y)
 
     def __init__(self, rowDim, colDim, mode=0, channels=1, out_channels=1, modify_col= False, row_div_col=0, weights_path="../weights/unet", var_filename="../weights/var.txt", show_function=None, read_func=None, validate_path_provider_func= None, validate_start_path=None):
         self.model = None
@@ -64,17 +57,19 @@ class Models:
                 path = self.validate_path_provider_func(start_path=self.validate_start_path)
             else:
                 path = pathForce
-            for i in range(len(os.listdir(path)) - 2):
+            for i in range(20):#len(os.listdir(path)) - 2):
                 true_path = path + 'mask/'
-                if onlyWithMetric and not os.path.exists(os.path.join(true_path, str(i) + '.jpg')):
+                if not os.path.exists(os.path.join(path, str(i) + '.jpg')):
+                    continue
+                if onlyWithMetric  and not os.path.exists(os.path.join(true_path, str(i) + '.jpg')):
                     continue
                 else:
                     if onlyWithoutMetric and os.path.exists(os.path.join(true_path, str(i) + '.jpg')):
                         continue
 
                 im = self.read_func(name=str(i), path=path, target_size=(self.colDim, self.rowDim), mode=validateMode)
-                img = merge.Merge(im)
-                imgX = img.reshape((1, self.rowDim, self.colDim, self.channels))
+                #img = merge.Merge(im)
+                imgX = im.reshape((1, self.rowDim, self.colDim, self.channels))
                 imgX = imgX/255
                 pred = self.model.predict(imgX)
                 pred = pred.reshape((self.rowDim, self.colDim))
@@ -84,7 +79,7 @@ class Models:
                     print("Custom metric: " + str(met.customMetric(pred, true, check=False, toDraw=im)))
                 else:
                     met.draw(pred,im)
-                x = [img, pred, im]
+                x = [im, pred, im]
                 self.show_function(x)
 
     def check_performance(self, validate_generator, times=1):
@@ -103,6 +98,18 @@ class Models:
             x.append(pic[0][0].reshape((self.rowDim, self.colDim,self.channels)))
             x.append(true)
             x.append(pred)
+            '''
+            import cv2
+            ims = pred*255
+            unique, counts = np.unique(pred, return_counts=True)
+            norm_image = cv2.normalize(ims, None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F)
+
+            #norm_image = norm_image.astype(np.uint8)
+
+            equ = cv2.equalizeHist(norm_image)
+
+            x.append(equ)
+            '''
             if self.show_function != None:
                 self.show_function(x)
 

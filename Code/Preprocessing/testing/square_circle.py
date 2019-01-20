@@ -1,6 +1,4 @@
-from Code.Libraries import MyOculusLib as mol
+from Code.Libraries import MyOculusRepoNav as morn
+import Code.Old.CircleFilter.CircleFilter as cf
 
-mol.init(im_path='../../../Images/all/',mouse_f=mol.measure_size)
-
-mol.all_path(mol.square_circle_on_1_2_in_path)
-
+morn.all_path(cf.square_circle_on_1_2_in_path, '../../../Images/all/')

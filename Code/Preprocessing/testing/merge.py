@@ -1,9 +1,8 @@
-from Code.Libraries import MyOculusLib as mol
+from Code.Libraries import MyOculusRepoNav as morn
 from Code.Preprocessing import MergeChannels as mh
-from Code.Old import LBPtest as ltest
+
 
 path = '../../../Images/all/'
 
-mol.init(im_path=path, mouse_f=mol.draw_elipse)
 merge = mh.MergeChannels(equalize=True, testMode=True)
-mol.all_path(merge.MergeOnPath)
+morn.all_path(merge.MergeOnPath, path)
