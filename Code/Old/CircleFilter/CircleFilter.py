@@ -1,6 +1,5 @@
 import cv2
 import numpy as np
-
 import Code.Libraries.MyOculusImageLib as moil
 
 

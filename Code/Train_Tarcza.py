@@ -8,9 +8,9 @@
 # skimage (feature LBP - nieznana wersja)
 
 
-from Code.Algorithms import Models as md
 from Code.Libraries import MyOculusImageLib as moil
 from Code.Libraries import MyOculusRepoNav as morn
+from Code.Algorithms import Models as md
 from Code.Preprocessing import DataAugmentationClasses as dac
 
 # params

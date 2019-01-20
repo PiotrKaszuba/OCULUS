@@ -1,17 +1,15 @@
+import Code.Libraries.MyOculusRepoNav as morn
+import Code.Libraries.MyOculusCsvLib as mocl
+import Code.Libraries.MyOculusImageLib as moil
+import Code.Preprocessing.MergeChannels as mc
+import Code.Algorithms.Models as md
 import os
 from functools import reduce
 
-import Code.Libraries.MyOculusCsvLib as mocl
-import Code.Libraries.MyOculusImageLib as moil
-import Code.Libraries.MyOculusRepoNav as morn
-import Code.Preprocessing.MergeChannels as mc
-
-
-# Builds a Repo based on existing repo (only images with mask) changing target image size and preprocessing images with function
+#Builds a Repo based on existing repo (only images with mask) changing target image size and preprocessing images with function
 class BuildRepo:
 
-    def __init__(self, repo_base, repo_name, new_name, size_level, scale=0.75, function=lambda x: x, onlyMasked=True,
-                 override=True):
+    def __init__(self, repo_base, repo_name, new_name, size_level, scale=0.75, function= lambda x:x, onlyMasked=True, override=True):
         self.old_repo = repo_base + repo_name + '/'
         self.new_repo = repo_base + new_name + '/'
         self.target_size = moil.getColsRows(size_level, scale)
@@ -66,6 +64,7 @@ class BuildRepo:
                 fail += 1
         return success, fail
 
+
     def createFromAllPathImageAfterFunction(self, old_repo_path, new_repo_path, function, target_size=None, eye=None,
                                             override=False, extension='.jpg', onlyMasked=False):
         success = 0
@@ -109,19 +108,15 @@ class BuildRepo:
             print("Patients finished: " + str(iter))
 
         print("Images created: " + str(success) + ", attempts failed to create: " + str(fail))
-
     def Build(self):
-        self.createFromAllPathImageAfterFunction(self.old_repo, self.new_repo, self.function,
-                                                 target_size=self.target_size, onlyMasked=self.onlyMasked,
-                                                 override=self.override)
-
+        self.createFromAllPathImageAfterFunction(self.old_repo, self.new_repo, self.function, target_size=self.target_size, onlyMasked=self.onlyMasked, override=self.override)
 
 if __name__ == "__main__":
     level = 20
     scale = 0.75
 
     equalize = True
-    mer = mc.MergeChannels(equalize)
+    mer= mc.MergeChannels(equalize)
 
     repo_base = "../../../Images/"
     repo_name = "all"

@@ -1,12 +1,12 @@
-import csv
 import os
-
+import csv
 import Code.Libraries.MyOculusImageLib as moil
 import Code.Libraries.MyOculusRepoNav as morn
 
 
 def getMaskHeader():
     return ['patient', 'date', 'eye', 'name', 'width', 'height', 'x', 'y', 'r']
+
 
 
 def writeToCsv(path, header, row, overwrite=False):

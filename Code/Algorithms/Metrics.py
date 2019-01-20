@@ -1,13 +1,10 @@
-import copy as cp
-
 import cv2
-import math
 import numpy as np
-
+import copy as cp
+import math
 import Code.Libraries.MyOculusImageLib as moil
 
-
-# draws contour of one main circle area
+#draws contour of one main circle area
 def draw(pred, toDraw, morph_iter=0, threshold=127):
     w, h, c = moil.getWidthHeightChannels(pred)
     pred = np.uint8(pred * 255)
@@ -42,12 +39,11 @@ def draw(pred, toDraw, morph_iter=0, threshold=127):
         cx = int(w / 2)
         cy = int(h / 2)
 
-
-# seeks for main circle area and returns centerDiff metric for this circle
+#seeks for main circle area and returns centerDiff metric for this circle
 def centerDiff(pred, true=None, x=None, y=None, width=None, height=None, r=None, morph_iter=0, threshold=127,
                check=False, toDraw=None):
     assert true is not None or (
-            x is not None and y is not None and width is not None and height is not None and r is not None)
+                x is not None and y is not None and width is not None and height is not None and r is not None)
 
     w, h, c = moil.getWidthHeightChannels(pred)
     pred = np.uint8(pred * 255)
@@ -132,8 +128,7 @@ def centerDiff(pred, true=None, x=None, y=None, width=None, height=None, r=None,
 
     return met
 
-
-# returns binaryDiff for segmented image mask
+#returns binaryDiff for segmented image mask
 def binaryDiff(pred, true, threshold=127, check=False):
     pred = np.uint8(pred * 255)
     if not true.dtype == np.uint8:

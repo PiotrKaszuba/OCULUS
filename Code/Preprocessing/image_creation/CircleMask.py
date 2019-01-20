@@ -1,17 +1,14 @@
-import copy
-import csv
+import Code.Libraries.MyOculusCsvLib as mocl
+import Code.Libraries.MyOculusRepoNav as morn
+import Code.Libraries.MyOculusImageLib as moil
+import Code.Algorithms.Models as md
 import os
-import random
-from functools import reduce
-
 import cv2
 import numpy as np
-
-import Code.Libraries.MyOculusCsvLib as mocl
-import Code.Libraries.MyOculusImageLib as moil
-import Code.Libraries.MyOculusRepoNav as morn
-
-
+import copy
+import random
+from functools import reduce
+import csv
 # PASTE TO PATIENTS REPO CSV FILE FROM Images/SharedMaskData and commit it modified as another version in SharedMaskData in case
 # something went wrong
 
@@ -29,6 +26,7 @@ class CircleMask:
         self.yy = 0
 
         self.targetSize = moil.getColsRows(size_level, scale)
+
 
     # mouse callback
     def draw_circle(self, event, x, y, flags, param):

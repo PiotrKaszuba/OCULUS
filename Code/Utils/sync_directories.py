@@ -1,5 +1,5 @@
-import os
 import shutil
+import os
 
 
 # lists all patients in local directory

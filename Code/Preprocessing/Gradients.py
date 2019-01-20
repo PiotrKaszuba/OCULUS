@@ -1,7 +1,5 @@
-import os
-
 import cv2
-
+import os
 import Code.Libraries.MyOculusImageLib as moil
 
 

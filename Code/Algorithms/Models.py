@@ -1,16 +1,13 @@
 import os
-
-from keras.layers import Input, concatenate, Conv2D, MaxPooling2D, UpSampling2D, Dropout
-# os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+#os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 from keras.models import *
+from keras.layers import Input, concatenate, Conv2D, MaxPooling2D, UpSampling2D, Dropout
 from keras.optimizers import *
-
 import Code.Algorithms.Metrics as met
-import Code.Libraries.MyOculusImageLib as moil
 import Code.Preprocessing.MergeChannels as mc
-
-
+import Code.Libraries.MyOculusImageLib as moil
 class Models:
+
 
     @staticmethod
     def model_show_function(x):
@@ -19,17 +16,15 @@ class Models:
             y.append(x[i + 1])
         moil.show(x[0], other_im=y)
 
-    def __init__(self, rowDim, colDim, mode=0, channels=1, out_channels=1, modify_col=False, row_div_col=0,
-                 weights_path="../weights/unet", var_filename="../weights/var.txt", show_function=None, read_func=None,
-                 validate_path_provider_func=None, validate_start_path=None):
+    def __init__(self, rowDim, colDim, mode=0, channels=1, out_channels=1, modify_col= False, row_div_col=0, weights_path="../weights/unet", var_filename="../weights/var.txt", show_function=None, read_func=None, validate_path_provider_func= None, validate_start_path=None):
         self.model = None
-        self.path = weights_path
-        self.var_filename = var_filename
+        self.path= weights_path
+        self.var_filename= var_filename
         self.rowDim = int(rowDim)
         self.colDim = int(colDim)
-        self.mode = mode
+        self.mode=mode
         self.channels = channels
-        self.out_channels = out_channels
+        self.out_channels=out_channels
         self.row_div_col = row_div_col
         self.show_function = show_function
         self.read_func = read_func
@@ -38,9 +33,9 @@ class Models:
 
         if row_div_col > 0:
             if modify_col:
-                self.colDim = int(rowDim / row_div_col)
+                self.colDim = int(rowDim/row_div_col)
             else:
-                self.rowDim = int(colDim * row_div_col)
+                self.rowDim = int(colDim*row_div_col)
 
     def save_weights(self):
         self.model.save_weights(self.path + str(self.var_file()))
@@ -51,37 +46,39 @@ class Models:
             self.model.load_weights(self.path + str(numb))
 
     def centerDiffMetric(pred, x, y):
-        return met.centerDiff(pred, x, y)
+        return met.centerDiff(pred,x,y)
 
-    def validate(self, pathForce=None, validateMode=0, onlyWithMetric=False, onlyWithoutMetric=False):
+
+
+    def validate(self, pathForce=None, validateMode=0, onlyWithMetric = False, onlyWithoutMetric = False):
         merge = mc.MergeChannels(True)
         while True:
             if pathForce == None:
                 path = self.validate_path_provider_func(start_path=self.validate_start_path)
             else:
                 path = pathForce
-            for i in range(20):  # len(os.listdir(path)) - 2):
+            for i in range(20):#len(os.listdir(path)) - 2):
                 true_path = path + 'mask/'
                 if not os.path.exists(os.path.join(path, str(i) + '.jpg')):
                     continue
-                if onlyWithMetric and not os.path.exists(os.path.join(true_path, str(i) + '.jpg')):
+                if onlyWithMetric  and not os.path.exists(os.path.join(true_path, str(i) + '.jpg')):
                     continue
                 else:
                     if onlyWithoutMetric and os.path.exists(os.path.join(true_path, str(i) + '.jpg')):
                         continue
 
                 im = self.read_func(name=str(i), path=path, target_size=(self.colDim, self.rowDim), mode=validateMode)
-                # img = merge.Merge(im)
+                #img = merge.Merge(im)
                 imgX = im.reshape((1, self.rowDim, self.colDim, self.channels))
-                imgX = imgX / 255
+                imgX = imgX/255
                 pred = self.model.predict(imgX)
                 pred = pred.reshape((self.rowDim, self.colDim))
 
-                if os.path.exists(os.path.join(true_path, str(i) + '.jpg')):
+                if os.path.exists(os.path.join(true_path, str(i)+'.jpg')):
                     true = self.read_func(name=str(i), path=true_path, target_size=(self.colDim, self.rowDim))
                     print("Custom metric: " + str(met.customMetric(pred, true, check=False, toDraw=im)))
                 else:
-                    met.draw(pred, im)
+                    met.draw(pred,im)
                 x = [im, pred, im]
                 self.show_function(x)
 
@@ -91,14 +88,14 @@ class Models:
 
             true = pic[1][0].reshape((self.rowDim, self.colDim, self.out_channels))
 
-            pred = self.model.predict(pic[0][0].reshape(1, self.rowDim, self.colDim, self.channels))
+            pred = self.model.predict(pic[0][0].reshape(1,self.rowDim,self.colDim,self.channels))
             pred = pred.reshape((self.rowDim, self.colDim))
-            # print(met.centerDiff(pred,true,check=False))
-            # print(met.binaryDiff(pred,true))
-            print("Custom metric: " + str(met.customMetric(pred, true)))
+            #print(met.centerDiff(pred,true,check=False))
+            #print(met.binaryDiff(pred,true))
+            print("Custom metric: " +str(met.customMetric(pred, true)))
             x = []
 
-            x.append(pic[0][0].reshape((self.rowDim, self.colDim, self.channels)))
+            x.append(pic[0][0].reshape((self.rowDim, self.colDim,self.channels)))
             x.append(true)
             x.append(pred)
             '''
@@ -115,6 +112,8 @@ class Models:
             '''
             if self.show_function != None:
                 self.show_function(x)
+
+
 
     def var_file(self, read=False):
         numb = 0
@@ -135,7 +134,7 @@ class Models:
         fo.close()
         return numb
 
-    def get_model(self, filters=2, le=1e-04):
+    def get_model(self, filters = 2, le=1e-04):
 
         if self.model != None:
             return self.model
@@ -149,46 +148,46 @@ class Models:
         pool1 = MaxPooling2D(pool_size=(2, 2))(conv1)
         print("pool1 shape:", pool1.shape)
 
-        conv2 = Conv2D(filters * 2, 3, activation='relu', padding='same', kernel_initializer='he_normal')(pool1)
+        conv2 = Conv2D(filters*2, 3, activation='relu', padding='same', kernel_initializer='he_normal')(pool1)
         print("conv2 shape:", conv2.shape)
-        conv2 = Conv2D(filters * 2, 3, activation='relu', padding='same', kernel_initializer='he_normal')(conv2)
+        conv2 = Conv2D(filters*2, 3, activation='relu', padding='same', kernel_initializer='he_normal')(conv2)
         print("conv2 shape:", conv2.shape)
         pool2 = MaxPooling2D(pool_size=(2, 2))(conv2)
         print("pool2 shape:", pool2.shape)
 
-        conv3 = Conv2D(filters * 4, 3, activation='relu', padding='same', kernel_initializer='he_normal')(pool2)
+        conv3 = Conv2D(filters*4, 3, activation='relu', padding='same', kernel_initializer='he_normal')(pool2)
         print("conv3 shape:", conv3.shape)
-        conv3 = Conv2D(filters * 4, 3, activation='relu', padding='same', kernel_initializer='he_normal')(conv3)
+        conv3 = Conv2D(filters*4, 3, activation='relu', padding='same', kernel_initializer='he_normal')(conv3)
         print("conv3 shape:", conv3.shape)
         pool3 = MaxPooling2D(pool_size=(2, 2))(conv3)
         print("pool3 shape:", pool3.shape)
 
-        conv4 = Conv2D(filters * 8, 3, activation='relu', padding='same', kernel_initializer='he_normal')(pool3)
-        conv4 = Conv2D(filters * 8, 3, activation='relu', padding='same', kernel_initializer='he_normal')(conv4)
+        conv4 = Conv2D(filters*8, 3, activation='relu', padding='same', kernel_initializer='he_normal')(pool3)
+        conv4 = Conv2D(filters*8, 3, activation='relu', padding='same', kernel_initializer='he_normal')(conv4)
         drop4 = Dropout(0.5)(conv4)
         pool4 = MaxPooling2D(pool_size=(2, 2))(drop4)
 
-        conv5 = Conv2D(filters * 16, 3, activation='relu', padding='same', kernel_initializer='he_normal')(pool4)
-        conv5 = Conv2D(filters * 16, 3, activation='relu', padding='same', kernel_initializer='he_normal')(conv5)
+        conv5 = Conv2D(filters*16, 3, activation='relu', padding='same', kernel_initializer='he_normal')(pool4)
+        conv5 = Conv2D(filters*16, 3, activation='relu', padding='same', kernel_initializer='he_normal')(conv5)
         drop5 = Dropout(0.5)(conv5)
 
-        up6 = Conv2D(filters * 8, 2, activation='relu', padding='same', kernel_initializer='he_normal')(
+        up6 = Conv2D(filters*8, 2, activation='relu', padding='same', kernel_initializer='he_normal')(
             UpSampling2D(size=(2, 2))(drop5))
         merge6 = concatenate([drop4, up6], axis=3)
-        conv6 = Conv2D(filters * 8, 3, activation='relu', padding='same', kernel_initializer='he_normal')(merge6)
-        conv6 = Conv2D(filters * 8, 3, activation='relu', padding='same', kernel_initializer='he_normal')(conv6)
+        conv6 = Conv2D(filters*8, 3, activation='relu', padding='same', kernel_initializer='he_normal')(merge6)
+        conv6 = Conv2D(filters*8, 3, activation='relu', padding='same', kernel_initializer='he_normal')(conv6)
 
-        up7 = Conv2D(filters * 4, 2, activation='relu', padding='same', kernel_initializer='he_normal')(
+        up7 = Conv2D(filters*4, 2, activation='relu', padding='same', kernel_initializer='he_normal')(
             UpSampling2D(size=(2, 2))(conv6))
         merge7 = concatenate([conv3, up7], axis=3)
-        conv7 = Conv2D(filters * 4, 3, activation='relu', padding='same', kernel_initializer='he_normal')(merge7)
-        conv7 = Conv2D(filters * 4, 3, activation='relu', padding='same', kernel_initializer='he_normal')(conv7)
+        conv7 = Conv2D(filters*4, 3, activation='relu', padding='same', kernel_initializer='he_normal')(merge7)
+        conv7 = Conv2D(filters*4, 3, activation='relu', padding='same', kernel_initializer='he_normal')(conv7)
 
-        up8 = Conv2D(filters * 2, 2, activation='relu', padding='same', kernel_initializer='he_normal')(
+        up8 = Conv2D(filters*2, 2, activation='relu', padding='same', kernel_initializer='he_normal')(
             UpSampling2D(size=(2, 2))(conv7))
         merge8 = concatenate([conv2, up8], axis=3)
-        conv8 = Conv2D(filters * 2, 3, activation='relu', padding='same', kernel_initializer='he_normal')(merge8)
-        conv8 = Conv2D(filters * 2, 3, activation='relu', padding='same', kernel_initializer='he_normal')(conv8)
+        conv8 = Conv2D(filters*2, 3, activation='relu', padding='same', kernel_initializer='he_normal')(merge8)
+        conv8 = Conv2D(filters*2, 3, activation='relu', padding='same', kernel_initializer='he_normal')(conv8)
 
         up9 = Conv2D(filters, 2, activation='relu', padding='same', kernel_initializer='he_normal')(
             UpSampling2D(size=(2, 2))(conv8))
@@ -197,6 +196,7 @@ class Models:
         conv9 = Conv2D(filters, 3, activation='relu', padding='same', kernel_initializer='he_normal')(conv9)
         conv9 = Conv2D(2, 3, activation='relu', padding='same', kernel_initializer='he_normal')(conv9)
         conv10 = Conv2D(1, 1, activation='sigmoid')(conv9)
+
 
         model = Model(input=inputs, output=conv10)
         model.compile(optimizer=Adam(lr=le), loss='binary_crossentropy', metrics=['accuracy'])
