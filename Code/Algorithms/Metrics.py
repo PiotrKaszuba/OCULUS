@@ -185,4 +185,6 @@ def binaryDiff(pred, true, threshold=127, check=False):
 
 
 def customMetric(pred, true, check=False, toDraw=None):
-    return (binaryDiff(pred, true, check=check) + centerDiff(pred, true, check=check, toDraw=toDraw)) / 2
+    bin = binaryDiff(pred, true, check=check)
+    cent = centerDiff(pred, true, check=check, toDraw=toDraw)
+    return [bin, cent]

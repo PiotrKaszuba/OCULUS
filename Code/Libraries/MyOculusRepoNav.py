@@ -51,6 +51,45 @@ def all_path(func, start_path, eye=None):
     obj.iterate_paths(func, start_path, eye, patient, max)
 
 
+def check_next_path(visited_path, path):
+    if visited_path is None:
+        return True
+    if path in visited_path:
+        return False
+    else:
+        return True
+
+
+def next_path(*args):
+    start_path = args[0]
+    visited_path = args[1]
+    eye = args[2] if len(args) > 2 else None
+    if eye != 'left' and eye != 'right':
+        eye = ['left', 'right']
+    else:
+        eye = [eye]
+
+    patient = os.listdir(start_path)
+
+    leng = len([f for f in patient if not os.path.isfile(os.path.join(start_path, f))])
+    for i in range(leng):
+        patient_path = patient[i]
+
+        date = os.listdir(start_path + patient_path + "/")
+        for j in range(len(date)):
+            date_path = date[j]
+
+            for k in eye:
+                if start_path == '':
+                    path = patient_path + "/" + date_path + "/" + k + "_eye_images/"
+                else:
+                    path = start_path + "/" + patient_path + "/" + date_path + "/" + k + "_eye_images/"
+                if check_next_path(visited_path, path):
+                    return path
+                else:
+                    continue
+
+
 def random_path(start_path, eye=None):
     if eye != 'left' and eye != 'right':
         if np.random.randint(0, 2) == 0:

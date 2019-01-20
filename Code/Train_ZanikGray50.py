@@ -12,7 +12,7 @@ from Code.Algorithms import Models as md
 from Code.Libraries import MyOculusImageLib as moil
 from Code.Libraries import MyOculusRepoNav as morn
 from Code.Preprocessing import DataAugmentationClasses as dac
-from Code.Preprocessing import MergeChannels as mc
+
 # params
 base_path = '../'
 image_size_level = 20
@@ -44,27 +44,28 @@ else:
 # data augmentation
 aug = dac.getAugmentationParams()
 
-FeatureName= "Zanik"
-TrainModeName = FeatureName+"Gray50"
+FeatureName = "Zanik"
+TrainModeName = FeatureName + "Gray50"
 
-path = base_path + 'Images/'+TrainModeName+'/'
+path = base_path + 'Images/' + TrainModeName + '/'
 
 class_mode = 'mask'
 
 # model
 show_function = md.Models.model_show_function
 read_function = moil.read_and_size
-validate_path_provider_func = morn.random_path
-validate_start_path = base_path + 'Images/'+FeatureName+'Validate/'
+validate_path_provider_func = morn.next_path
+validate_start_path = base_path + 'Images/' + FeatureName + 'Validate/'
 filters = 12
 
 load_weights = True
-weights_path = "../weights/unet"+TrainModeName
-var_filename = "../weights/var"+TrainModeName+".txt"
+weights_path = "../weights/unet" + TrainModeName
+var_filename = "../weights/var" + TrainModeName + ".txt"
 validate = False
-#mer = mc.MergeChannels(True)
-validatePreprocessFunc = lambda x:x
+# mer = mc.MergeChannels(True)
+validatePreprocessFunc = lambda x: x
 draw = False
+sumTimes = None
 
 check_perf_times = 5
 check_perf_times_in_loop = 0
@@ -94,7 +95,8 @@ Mod.check_performance(train_generator, times=check_perf_times)
 
 # go
 if validate:
-    Mod.validate(validateMode=mode, preprocessFunc=validatePreprocessFunc, draw=draw, onlyWithMetric=onlyWithMetric, onlyWithoutMetric=onlyWithoutMetric)
+    Mod.validate(validateMode=mode, preprocessFunc=validatePreprocessFunc, draw=draw, onlyWithMetric=onlyWithMetric,
+                 onlyWithoutMetric=onlyWithoutMetric, sumTimes=sumTimes)
 else:
     for i in range(total_ep):
         print("ep:" + str(i))

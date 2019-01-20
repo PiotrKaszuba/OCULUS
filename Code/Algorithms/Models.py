@@ -4,7 +4,7 @@ from keras.layers import concatenate, Conv2D, MaxPooling2D, UpSampling2D, Dropou
 # os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 from keras.models import *
 from keras.optimizers import *
-
+from operator import add, truediv
 import Code.Algorithms.Metrics as met
 import Code.Libraries.MyOculusImageLib as moil
 
@@ -56,14 +56,21 @@ class Models:
         return met.centerDiff(pred, x, y)
 
     def validate(self, pathForce=None, validateMode=0, preprocessFunc=lambda x: x, draw=True, onlyWithMetric=False,
-                 onlyWithoutMetric=False):
-
+                 onlyWithoutMetric=False, sumTimes = None):
+        sum = [0, 0]
+        times = 0
+        visited_path = {}
         while True:
             if pathForce is None:
-                path = self.validate_path_provider_func(start_path=self.validate_start_path)
+                path = self.validate_path_provider_func(self.validate_start_path, visited_path)
+                visited_path[path] = times
+
             else:
                 path = pathForce
-            for i in range(20):  # len(os.listdir(path)) - 2):
+            if path is None:
+                break
+            for i in range(50):  # len(os.listdir(path)) - 2):
+
                 true_path = path + 'mask/'
                 if not os.path.exists(os.path.join(path, str(i) + '.jpg')):
                     continue
@@ -79,14 +86,23 @@ class Models:
                 imgX = imgX / 255
                 pred = self.model.predict(imgX)
                 pred = pred.reshape((self.rowDim, self.colDim))
-
+                toDraw = im if draw else None
                 if os.path.exists(os.path.join(true_path, str(i) + '.jpg')):
                     true = self.read_func(name=str(i), path=true_path, target_size=(self.colDim, self.rowDim))
-                    print("Custom metric: " + str(met.customMetric(pred, true, check=False, toDraw=im)))
+
+                    results = met.customMetric(pred, true, check=False, toDraw=toDraw)
+                    sum = list(map(add, sum, results))
+                    times+=1
+                    if sumTimes is not None and times >= sumTimes:
+                        break
                 else:
-                    met.draw(pred, im)
+                    met.draw(pred, toDraw)
                 x = [im, pred, img]
-                self.show_function(x)
+                if sumTimes is None:
+                    self.show_function(x)
+
+        avgs = [x / times for x in sum]
+        print("Times: " + str(times) +", sums: " + str(sum[0]) + ", " + str(sum[1]) + ", Average metrics: " + str(avgs[0]) + ", " + str(avgs[1]))
 
     def check_performance(self, validate_generator, times=1):
         for i in range(times):
