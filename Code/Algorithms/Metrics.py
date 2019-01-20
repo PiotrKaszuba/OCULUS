@@ -10,7 +10,7 @@ import Code.Libraries.MyOculusImageLib as moil
 # draws contour of one main circle area
 def draw(pred, toDraw, morph_iter=0, threshold=127):
     w, h, c = moil.getWidthHeightChannels(pred)
-    pred = np.uint8(pred * 255)
+    #pred = np.uint8(pred * 255)
     ret, thresh = cv2.threshold(pred, threshold, 255, cv2.THRESH_BINARY)
 
     kernel = np.ones((3, 3), np.uint8)
@@ -50,7 +50,7 @@ def centerDiff(pred, true=None, x=None, y=None, width=None, height=None, r=None,
             x is not None and y is not None and width is not None and height is not None and r is not None)
 
     w, h, c = moil.getWidthHeightChannels(pred)
-    pred = np.uint8(pred * 255)
+    #pred = np.uint8(pred * 255)
     ret, thresh = cv2.threshold(pred, threshold, 255, cv2.THRESH_BINARY)
     if check:
         moil.show(thresh)
@@ -135,7 +135,7 @@ def centerDiff(pred, true=None, x=None, y=None, width=None, height=None, r=None,
 
 # returns binaryDiff for segmented image mask
 def binaryDiff(pred, true, threshold=127, check=False):
-    pred = np.uint8(pred * 255)
+    #pred = np.uint8(pred * 255)
     if not true.dtype == np.uint8:
         true = np.uint8(true * 255)
     ret, thresh = cv2.threshold(pred, threshold, 255, cv2.THRESH_BINARY)
@@ -187,15 +187,22 @@ def binaryDiff(pred, true, threshold=127, check=False):
 def customMetric(pred, true, check=False, toDraw=None):
     bin = binaryDiff(pred, true, check=check)
     cent = centerDiff(pred, true, check=check, toDraw=toDraw)
-    return [bin, cent]
+    jaccard = jaccard_index(true, pred)
+    print("Jaccard: " +str(jaccard))
+    dice = dice_coefficient(true, pred)
+    print("Dice: " + str(dice))
+    return [bin, cent, jaccard, dice]
 
 
 def jaccard_index(ground_truth, prediction):
+
     intersection = np.logical_and(ground_truth, prediction)
     union = np.logical_or(ground_truth, prediction)
     return np.sum(intersection) / np.sum(union)
 
 
 def dice_coefficient(ground_truth, prediction):
+
     intersection = np.logical_and(ground_truth, prediction)
-    return (2 * np.sum(intersection)) / (np.sum(ground_truth) + np.sum(prediction))
+    union = np.logical_or(ground_truth, prediction)
+    return (2 * np.sum(intersection)) / (np.sum(intersection) + np.sum(union))

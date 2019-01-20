@@ -1,5 +1,6 @@
 import os
-
+import cv2
+import numpy as np
 from keras.layers import concatenate, Conv2D, MaxPooling2D, UpSampling2D, Dropout
 # os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 from keras.models import *
@@ -8,7 +9,9 @@ from operator import add, truediv
 import Code.Algorithms.Metrics as met
 import Code.Libraries.MyOculusImageLib as moil
 
-
+def normalizeImage(image):
+    #image = cv2.normalize(image, None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F)
+    return np.uint8(image * 255)
 class Models:
 
     @staticmethod
@@ -57,7 +60,7 @@ class Models:
 
     def validate(self, pathForce=None, validateMode=0, preprocessFunc=lambda x: x, draw=True, onlyWithMetric=False,
                  onlyWithoutMetric=False, sumTimes = None):
-        sum = [0, 0]
+        sum = [0, 0, 0, 0]
         times = 0
         visited_path = {}
         while True:
@@ -86,10 +89,19 @@ class Models:
                 imgX = imgX / 255
                 pred = self.model.predict(imgX)
                 pred = pred.reshape((self.rowDim, self.colDim))
+                pred = normalizeImage(pred)
+                ret, pred = cv2.threshold(pred, 127, 255, cv2.THRESH_BINARY)
+
+                pred = pred.reshape((self.rowDim, self.colDim, self.out_channels))
+
                 toDraw = im if draw else None
+                x = [im, pred, img]
                 if os.path.exists(os.path.join(true_path, str(i) + '.jpg')):
                     true = self.read_func(name=str(i), path=true_path, target_size=(self.colDim, self.rowDim))
 
+                    ret, true = cv2.threshold(true, 127, 255, cv2.THRESH_BINARY)
+                    true = true.reshape((self.rowDim, self.colDim, self.out_channels))
+                    x.append(true)
                     results = met.customMetric(pred, true, check=False, toDraw=toDraw)
                     sum = list(map(add, sum, results))
                     times+=1
@@ -97,23 +109,38 @@ class Models:
                         break
                 else:
                     met.draw(pred, toDraw)
-                x = [im, pred, img]
+
                 if sumTimes is None:
                     self.show_function(x)
 
         avgs = [x / times for x in sum]
-        print("Times: " + str(times) +", sums: " + str(sum[0]) + ", " + str(sum[1]) + ", Average metrics: " + str(avgs[0]) + ", " + str(avgs[1]))
+        strgSum = ''
+        strgAvgs = ''
+        for val in sum:
+            strgSum += str(val) + ', '
+        for val in avgs:
+            strgAvgs += str(val) + ', '
+        print("Times: " + str(times) +", sums: " + strgSum + "Average metrics: " + strgAvgs)
 
     def check_performance(self, validate_generator, times=1):
         for i in range(times):
             pic = validate_generator.next()
 
-            true = pic[1][0].reshape((self.rowDim, self.colDim, self.out_channels))
+            true = pic[1][0]
 
             pred = self.model.predict(pic[0][0].reshape(1, self.rowDim, self.colDim, self.channels))
-            pred = pred.reshape((self.rowDim, self.colDim))
+            pred = pred.reshape((self.rowDim, self.colDim, self.out_channels))
+            true = true.reshape((self.rowDim, self.colDim, self.out_channels))
+            pred = normalizeImage(pred)
+            true = normalizeImage(true)
+            ret, pred = cv2.threshold(pred, 127, 255, cv2.THRESH_BINARY)
+            ret, true = cv2.threshold(true, 127, 255, cv2.THRESH_BINARY)
+            pred = pred.reshape((self.rowDim, self.colDim, self.out_channels))
+            true = true.reshape((self.rowDim, self.colDim, self.out_channels))
             # print(met.centerDiff(pred,true,check=False))
             # print(met.binaryDiff(pred,true))
+
+
             print("Custom metric: " + str(met.customMetric(pred, true)))
             x = []
 
