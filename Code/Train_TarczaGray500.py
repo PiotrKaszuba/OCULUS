@@ -45,7 +45,7 @@ else:
 aug = dac.getAugmentationParams()
 
 FeatureName = "Tarcza"
-TrainModeName = FeatureName + "Gray300"
+TrainModeName = FeatureName + "Gray500"
 
 path = base_path + 'Images/' + TrainModeName + '/'
 
@@ -62,11 +62,11 @@ load_weights = True
 save_modulo = 100
 weights_path = "../weights/unet" + TrainModeName
 var_filename = "../weights/var" + TrainModeName + ".txt"
-validate = False
+validate = True
 # mer = mc.MergeChannels(True)
 validatePreprocessFunc = lambda x: x
 draw = True
-sumTimes = None
+sumTimes = 100
 
 check_perf_times = 1
 check_perf_times_in_loop = 0

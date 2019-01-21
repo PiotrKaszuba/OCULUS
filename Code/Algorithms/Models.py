@@ -1,17 +1,23 @@
 import os
+from operator import add
+
 import cv2
+import keras
 import numpy as np
 from keras.layers import concatenate, Conv2D, MaxPooling2D, UpSampling2D, Dropout
 # os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 from keras.models import *
 from keras.optimizers import *
-from operator import add, truediv
+
 import Code.Algorithms.Metrics as met
 import Code.Libraries.MyOculusImageLib as moil
 
+
 def normalizeImage(image):
-    #image = cv2.normalize(image, None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F)
+    # image = cv2.normalize(image, None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F)
     return np.uint8(image * 255)
+
+
 class Models:
 
     @staticmethod
@@ -50,16 +56,18 @@ class Models:
     def load_weights(self):
         try:
             numb = self.var_file(True)
-            if numb > 0:
+            if numb >= 0:
                 self.model.load_weights(self.path + '_' + str(numb))
+            return True
         except:
             print("Nie udało się wczytać wag sieci!")
+            return False
 
     def centerDiffMetric(pred, x, y):
         return met.centerDiff(pred, x, y)
 
     def validate(self, pathForce=None, validateMode=0, preprocessFunc=lambda x: x, draw=True, onlyWithMetric=False,
-                 onlyWithoutMetric=False, sumTimes = None):
+                 onlyWithoutMetric=False, sumTimes=None):
         sum = [0, 0, 0, 0]
         times = 0
         visited_path = {}
@@ -104,7 +112,7 @@ class Models:
                     x.append(true)
                     results = met.customMetric(pred, true, check=False, toDraw=toDraw)
                     sum = list(map(add, sum, results))
-                    times+=1
+                    times += 1
                     if sumTimes is not None and times >= sumTimes:
                         break
                 else:
@@ -120,7 +128,7 @@ class Models:
             strgSum += str(val) + ', '
         for val in avgs:
             strgAvgs += str(val) + ', '
-        print("Times: " + str(times) +", sums: " + strgSum + "Average metrics: " + strgAvgs)
+        print("Times: " + str(times) + ", sums: " + strgSum + "Average metrics: " + strgAvgs)
 
     def check_performance(self, validate_generator, times=1):
         for i in range(times):
@@ -139,7 +147,6 @@ class Models:
             true = true.reshape((self.rowDim, self.colDim, self.out_channels))
             # print(met.centerDiff(pred,true,check=False))
             # print(met.binaryDiff(pred,true))
-
 
             print("Custom metric: " + str(met.customMetric(pred, true)))
             x = []
@@ -163,10 +170,10 @@ class Models:
                 self.show_function(x)
 
     def var_file(self, read=False):
-        numb = 0
+        numb = -1
         if not os.path.isfile(self.var_filename):
             fo = open(self.var_filename, "w")
-            fo.write("0")
+            fo.write("-1")
             fo.close()
         else:
             fo = open(self.var_filename, "r")
@@ -181,7 +188,7 @@ class Models:
         fo.close()
         return numb
 
-    def get_model(self, filters=2, le=1e-04):
+    def get_model(self, filters=2, le=1e-04, decay=0):
 
         if self.model != None:
             return self.model
@@ -245,7 +252,21 @@ class Models:
         conv10 = Conv2D(1, 1, activation='sigmoid')(conv9)
 
         model = Model(input=inputs, output=conv10)
-        model.compile(optimizer=Adam(lr=le), loss='binary_crossentropy', metrics=['accuracy'])
+        model.compile(optimizer=Adam(lr=le, decay=decay), loss='binary_crossentropy', metrics=['accuracy'])
+
         self.model = model
 
         return self.model
+
+
+class Callbacks(keras.callbacks.Callback):
+
+    def on_epoch_end(self, epoch, logs={}):
+        lr = self.model.optimizer.lr
+        decay = self.model.optimizer.decay
+        iterations = self.model.optimizer.iterations
+        lr_with_decay = lr / (1. + decay * K.cast(iterations, K.dtype(decay)))
+        print(K.eval(iterations))
+        print(K.eval(lr_with_decay))
+        return
+

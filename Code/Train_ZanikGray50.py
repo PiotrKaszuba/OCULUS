@@ -25,7 +25,7 @@ if withMetricOrNo == 1:
 if withMetricOrNo == 2:
     onlyWithoutMetric = True
 batch_size = 32
-total_ep = 1000
+total_ep = 500
 ep = 1
 steps = 10
 
@@ -59,6 +59,7 @@ validate_start_path = base_path + 'Images/' + FeatureName + 'Validate/'
 filters = 12
 
 load_weights = True
+save_modulo = 100
 weights_path = "../weights/unet" + TrainModeName
 var_filename = "../weights/var" + TrainModeName + ".txt"
 validate = False
@@ -72,6 +73,7 @@ check_perf_times_in_loop = 0
 loop_modulo = 1
 
 learn_rate = 3e-04
+decay_rate = 4e-04
 # setup
 f = dac.ImageDataGeneratorExtension(rotation_range=aug['rotation_range'],
                                     width_shift_range=aug['width_shift_range'],
@@ -87,21 +89,29 @@ Mod = md.Models(rows, cols, mode=mode, channels=channels_in, show_function=show_
                 weights_path=weights_path, var_filename=var_filename)
 
 # model creation
-model = Mod.get_model(filters=filters, le=learn_rate)
+model = Mod.get_model(filters=filters, le=learn_rate, decay=decay_rate)
+weights_loaded = False
 if load_weights:
-    Mod.load_weights()
+    weights_loaded = Mod.load_weights()
+if not weights_loaded:
+    Mod.save_weights()
 
 Mod.check_performance(train_generator, times=check_perf_times)
+
+callbacks = md.Callbacks()
 
 # go
 if validate:
     Mod.validate(validateMode=mode, preprocessFunc=validatePreprocessFunc, draw=draw, onlyWithMetric=onlyWithMetric,
                  onlyWithoutMetric=onlyWithoutMetric, sumTimes=sumTimes)
 else:
-    for i in range(total_ep):
+    for loop in range(total_ep):
+        i = loop + 1
         print("ep:" + str(i))
-        Mod.save_weights()
-        model.fit_generator(train_generator, steps_per_epoch=steps, epochs=ep)
+
+        model.fit_generator(train_generator, steps_per_epoch=steps, epochs=ep, callbacks=[callbacks])
+        if i % save_modulo == 0:
+            Mod.save_weights()
 
         if i % loop_modulo == 0:
             Mod.check_performance(train_generator, times=check_perf_times_in_loop)

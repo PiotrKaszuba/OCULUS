@@ -23,6 +23,7 @@ def draw(pred, toDraw, morph_iter=0, threshold=127):
     area = 0.0
     ind = 0
     i = 0
+
     for cont in contours:
         try:
             temp = cv2.contourArea(cont) / cv2.arcLength(cont, True)
@@ -66,9 +67,13 @@ def centerDiff(pred, true=None, x=None, y=None, width=None, height=None, r=None,
     area = 0.0
     ind = 0
     i = 0
+
     for cont in contours:
         try:
-            temp = cv2.contourArea(cont) / cv2.arcLength(cont, True)
+            cAr = cv2.contourArea(cont)
+            cAr = math.pow(cAr, 1/1.8)
+            arL = cv2.arcLength(cont, True)
+            temp = cAr / arL
         except:
             temp = 0
         if temp > area:
