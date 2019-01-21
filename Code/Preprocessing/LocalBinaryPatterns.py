@@ -7,19 +7,20 @@ import Code.Libraries.MyOculusImageLib as moil
 
 
 class LocalBinaryPatterns:
-    def __init__(self, numPoints, radius, method="uniform", equalize=False, negative=False):
+    def __init__(self, numPoints, radius, method="uniform", equalize=False, negative=False, scale=0):
         # store the number of points and radius
         self.numPoints = numPoints
         self.radius = radius
         self.method = method
         self.equalize = equalize
         self.negative = negative
+        self.scale = scale
 
     def LbpOnPath(self, path):
         for i in range(len(os.listdir(path)) - 1):
-            img = moil.read_and_size(str(i), path=path)
+            img = moil.read_and_size(str(i), path=path, scale=self.scale)
             lbp = self.describe(img)
-            moil.show(lbp)
+            moil.show(lbp, other_im=[im])
             # (fig, ax) = plt.subplots()
             # ax.hist(lbp.ravel(), normed=True, bins=np.arange(0, self.numPoints + 3), range=(0, self.numPoints + 2))
 

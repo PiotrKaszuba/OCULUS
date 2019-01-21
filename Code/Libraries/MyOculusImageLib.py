@@ -1,7 +1,76 @@
 import copy
+import math
 
 import cv2
 import numpy as np
+
+
+def morphMultiClosing(image, iterations=0, kernel=None):
+    if kernel is None:
+        kernel = np.ones((3, 3), np.uint8)
+    dilated = cv2.dilate(image, kernel, iterations=iterations)
+    eroded = cv2.erode(dilated, kernel, iterations=iterations)
+    return eroded
+
+
+def selectBiggerCircularContour(image, area_growth_ratio=0.2):
+    img, contours, hierarchy = cv2.findContours(image, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+    AreaScalling = 2
+    rootDegree = AreaScalling - area_growth_ratio
+    powerIndex = 1 / rootDegree
+
+    maxRank = 0.0
+    maxRankInd = None
+
+    for i in range(len(contours)):
+        try:
+            contourArea = cv2.contourArea(contours[i])
+            AreaRatio = math.pow(contourArea, powerIndex)
+            arcLength = cv2.arcLength(contours[i], True)
+            rank = AreaRatio / arcLength
+        except:
+            rank = 0
+        if rank > maxRank:
+            maxRank = rank
+            maxRankInd = i
+
+    return contours[maxRankInd] if maxRankInd is not None else None
+
+
+def convertImageType(image, type, maxValue, oldMaxValue):
+    if image.dtype == type:
+        return image
+    image = image / oldMaxValue * maxValue
+    return image.astype(type)
+
+
+def convertToNetRangeFromByte(image):
+    return convertImageType(image, np.float32, 1, 255)
+
+
+def convertToByteRangeFromNet(image):
+    return convertImageType(image, np.uint8, 255, 1)
+
+
+def rollupBeginningVirtualDimensions(image):
+    shape = np.shape(image)
+    for i in range(len(shape)):
+        if shape[i] > 1:
+            return image.reshape(shape[i:])
+
+
+def getBinaryThreshold(image, threshold=127, maxVal=255):
+    shape = np.shape(image)
+    # loses info about shape of size 1
+    ret, thresh = cv2.threshold(image, threshold, maxVal, cv2.THRESH_BINARY)
+    return thresh.reshape(shape)
+
+
+def convertImageNetOutput(image):
+    image = rollupBeginningVirtualDimensions(image)
+    image = convertToByteRangeFromNet(image)
+    return image
 
 
 def getColsRows(level, base_scale, use_col=True):

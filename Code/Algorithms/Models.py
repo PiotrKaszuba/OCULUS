@@ -1,21 +1,16 @@
 import os
+import pickle
 from operator import add
 
-import cv2
 import keras
-import numpy as np
 from keras.layers import concatenate, Conv2D, MaxPooling2D, UpSampling2D, Dropout
 # os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 from keras.models import *
 from keras.optimizers import *
+from matplotlib import pyplot as plt
 
 import Code.Algorithms.Metrics as met
 import Code.Libraries.MyOculusImageLib as moil
-
-
-def normalizeImage(image):
-    # image = cv2.normalize(image, None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F)
-    return np.uint8(image * 255)
 
 
 class Models:
@@ -58,7 +53,8 @@ class Models:
             numb = self.var_file(True)
             if numb >= 0:
                 self.model.load_weights(self.path + '_' + str(numb))
-            return True
+                return True
+            return False
         except:
             print("Nie udało się wczytać wag sieci!")
             return False
@@ -96,21 +92,18 @@ class Models:
                 imgX = img.reshape((1, self.rowDim, self.colDim, self.channels))
                 imgX = imgX / 255
                 pred = self.model.predict(imgX)
-                pred = pred.reshape((self.rowDim, self.colDim))
-                pred = normalizeImage(pred)
-                ret, pred = cv2.threshold(pred, 127, 255, cv2.THRESH_BINARY)
 
-                pred = pred.reshape((self.rowDim, self.colDim, self.out_channels))
+                pred = moil.convertImageNetOutput(pred)
 
                 toDraw = im if draw else None
+
                 x = [im, pred, img]
                 if os.path.exists(os.path.join(true_path, str(i) + '.jpg')):
                     true = self.read_func(name=str(i), path=true_path, target_size=(self.colDim, self.rowDim))
 
-                    ret, true = cv2.threshold(true, 127, 255, cv2.THRESH_BINARY)
                     true = true.reshape((self.rowDim, self.colDim, self.out_channels))
                     x.append(true)
-                    results = met.customMetric(pred, true, check=False, toDraw=toDraw)
+                    results = met.customMetric(pred, true, toDraw=toDraw)
                     sum = list(map(add, sum, results))
                     times += 1
                     if sumTimes is not None and times >= sumTimes:
@@ -137,35 +130,16 @@ class Models:
             true = pic[1][0]
 
             pred = self.model.predict(pic[0][0].reshape(1, self.rowDim, self.colDim, self.channels))
-            pred = pred.reshape((self.rowDim, self.colDim, self.out_channels))
-            true = true.reshape((self.rowDim, self.colDim, self.out_channels))
-            pred = normalizeImage(pred)
-            true = normalizeImage(true)
-            ret, pred = cv2.threshold(pred, 127, 255, cv2.THRESH_BINARY)
-            ret, true = cv2.threshold(true, 127, 255, cv2.THRESH_BINARY)
-            pred = pred.reshape((self.rowDim, self.colDim, self.out_channels))
-            true = true.reshape((self.rowDim, self.colDim, self.out_channels))
-            # print(met.centerDiff(pred,true,check=False))
-            # print(met.binaryDiff(pred,true))
+            pred = moil.convertImageNetOutput(pred)
+            true = moil.convertImageNetOutput(true)
 
-            print("Custom metric: " + str(met.customMetric(pred, true)))
+            met.customMetric(pred, true)
             x = []
 
             x.append(pic[0][0].reshape((self.rowDim, self.colDim, self.channels)))
             x.append(true)
             x.append(pred)
-            '''
-            import cv2
-            ims = pred*255
-            unique, counts = np.unique(pred, return_counts=True)
-            norm_image = cv2.normalize(ims, None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F)
 
-            #norm_image = norm_image.astype(np.uint8)
-
-            equ = cv2.equalizeHist(norm_image)
-
-            x.append(equ)
-            '''
             if self.show_function != None:
                 self.show_function(x)
 
@@ -187,6 +161,21 @@ class Models:
         fo.write(str(numb))
         fo.close()
         return numb
+
+    def plot_loss(self, epoch=None):
+        b = None
+        if epoch is None:
+            epoch = self.var_file(read=True)
+        try:
+            with open(self.path + "_losses_" + str(epoch), 'rb') as handle:
+                b = pickle.load(handle)
+        except:
+            return
+        if b is None:
+            return
+        plt.plot(list(range(1, epoch + 1)), b, label="loss")
+        plt.legend()
+        plt.show()
 
     def get_model(self, filters=2, le=1e-04, decay=0):
 
@@ -261,12 +250,28 @@ class Models:
 
 class Callbacks(keras.callbacks.Callback):
 
-    def on_epoch_end(self, epoch, logs={}):
-        lr = self.model.optimizer.lr
-        decay = self.model.optimizer.decay
-        iterations = self.model.optimizer.iterations
-        lr_with_decay = lr / (1. + decay * K.cast(iterations, K.dtype(decay)))
-        print(K.eval(iterations))
-        print(K.eval(lr_with_decay))
-        return
+    def __init__(self, ModelClass, save_modulo_epochs=None, collectLoss=False, printDecay=False):
+        self.ModelClass = ModelClass
+        self.save_modulo_epochs = save_modulo_epochs
+        self.printDecay = printDecay
+        self.collectLoss = collectLoss
+        self.losses = []
 
+    def on_epoch_end(self, epoch, logs={}):
+        if self.printDecay:
+            lr = self.model.optimizer.lr
+            decay = self.model.optimizer.decay
+            iterations = self.model.optimizer.iterations
+            lr_with_decay = lr / (1. + decay * K.cast(iterations, K.dtype(decay)))
+            print(K.eval(iterations))
+            print(K.eval(lr_with_decay))
+
+        self.losses.append(logs.get('loss'))
+        if self.save_modulo_epochs is not None:
+            if (epoch + 1) % self.save_modulo_epochs == 0:
+                self.ModelClass.save_weights()
+                if self.collectLoss:
+                    with open(self.ModelClass.path + '_losses_' + str(len(self.losses)), 'wb') as handle:
+                        pickle.dump(self.losses, handle)
+
+        return

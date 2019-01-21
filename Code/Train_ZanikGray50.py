@@ -74,6 +74,9 @@ loop_modulo = 1
 
 learn_rate = 3e-04
 decay_rate = 4e-04
+printDecay = True
+
+collectLoss = True
 # setup
 f = dac.ImageDataGeneratorExtension(rotation_range=aug['rotation_range'],
                                     width_shift_range=aug['width_shift_range'],
@@ -98,8 +101,7 @@ if not weights_loaded:
 
 Mod.check_performance(train_generator, times=check_perf_times)
 
-callbacks = md.Callbacks()
-
+callbacks = md.Callbacks(ModelClass=Mod, save_modulo_epochs=save_modulo, printDecay=printDecay, collectLoss=collectLoss)
 # go
 if validate:
     Mod.validate(validateMode=mode, preprocessFunc=validatePreprocessFunc, draw=draw, onlyWithMetric=onlyWithMetric,
@@ -110,8 +112,6 @@ else:
         print("ep:" + str(i))
 
         model.fit_generator(train_generator, steps_per_epoch=steps, epochs=ep, callbacks=[callbacks])
-        if i % save_modulo == 0:
-            Mod.save_weights()
 
         if i % loop_modulo == 0:
             Mod.check_performance(train_generator, times=check_perf_times_in_loop)

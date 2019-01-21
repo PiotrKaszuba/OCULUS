@@ -25,8 +25,8 @@ if withMetricOrNo == 1:
 if withMetricOrNo == 2:
     onlyWithoutMetric = True
 batch_size = 32
-total_ep = 500
-ep = 1
+total_ep = 1
+ep = 500
 steps = 10
 
 cols, rows = moil.getColsRows(level=image_size_level, base_scale=base_scale)
@@ -62,7 +62,7 @@ load_weights = True
 save_modulo = 100
 weights_path = "../weights/unet" + TrainModeName
 var_filename = "../weights/var" + TrainModeName + ".txt"
-validate = False
+validate = True
 # mer = mc.MergeChannels(True)
 validatePreprocessFunc = lambda x: x
 draw = True
@@ -74,6 +74,9 @@ loop_modulo = 1
 
 learn_rate = 3e-04
 decay_rate = 4e-04
+printDecay = True
+
+collectLoss = True
 # setup
 f = dac.ImageDataGeneratorExtension(rotation_range=aug['rotation_range'],
                                     width_shift_range=aug['width_shift_range'],
@@ -95,10 +98,10 @@ if load_weights:
     weights_loaded = Mod.load_weights()
 if not weights_loaded:
     Mod.save_weights()
-
+Mod.plot_loss(500)
 Mod.check_performance(train_generator, times=check_perf_times)
 
-callbacks = md.Callbacks()
+callbacks = md.Callbacks(ModelClass=Mod, save_modulo_epochs=save_modulo, printDecay=printDecay, collectLoss=collectLoss)
 
 # go
 if validate:
@@ -110,8 +113,6 @@ else:
         print("ep:" + str(i))
 
         model.fit_generator(train_generator, steps_per_epoch=steps, epochs=ep, callbacks=[callbacks])
-        if i % save_modulo == 0:
-            Mod.save_weights()
 
         if i % loop_modulo == 0:
             Mod.check_performance(train_generator, times=check_perf_times_in_loop)

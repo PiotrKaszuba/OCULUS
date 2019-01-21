@@ -1,96 +1,42 @@
-import copy as cp
-
-import cv2
 import math
+import cv2
 import numpy as np
-
 import Code.Libraries.MyOculusImageLib as moil
 
 
 # draws contour of one main circle area
 def draw(pred, toDraw, morph_iter=0, threshold=127):
-    w, h, c = moil.getWidthHeightChannels(pred)
-    #pred = np.uint8(pred * 255)
-    ret, thresh = cv2.threshold(pred, threshold, 255, cv2.THRESH_BINARY)
+    thresh = moil.getBinaryThreshold(pred, threshold)
 
-    kernel = np.ones((3, 3), np.uint8)
-    dilated = cv2.dilate(thresh, kernel, iterations=morph_iter)
+    closed = moil.morphMultiClosing(thresh, morph_iter)
 
-    eroded = cv2.erode(dilated, kernel, iterations=morph_iter)
+    contour = moil.selectBiggerCircularContour(closed)
 
-    im2, contours, hierarchy = cv2.findContours(eroded, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-
-    area = 0.0
-    ind = 0
-    i = 0
-
-    for cont in contours:
-        try:
-            temp = cv2.contourArea(cont) / cv2.arcLength(cont, True)
-        except:
-            temp = 0
-        if temp > area:
-            area = temp
-            ind = i
-        i += 1
-    try:
-        M = cv2.moments(contours[ind])
-        cx = int(M['m10'] / M['m00'])
-        cy = int(M['m01'] / M['m00'])
-        if toDraw is not None:
-            cv2.drawContours(toDraw, contours, ind, (255, 255, 255), 2)
-    except:
-        cx = int(w / 2)
-        cy = int(h / 2)
+    if toDraw is not None and contour is not None:
+        cv2.drawContours(toDraw, [contour], -1, (255, 255, 255), 2)
 
 
 # seeks for main circle area and returns centerDiff metric for this circle
 def centerDiff(pred, true=None, x=None, y=None, width=None, height=None, r=None, morph_iter=0, threshold=127,
-               check=False, toDraw=None):
+               toDraw=None):
     assert true is not None or (
             x is not None and y is not None and width is not None and height is not None and r is not None)
 
+    thresh = moil.getBinaryThreshold(pred, threshold)
+
+    closed = moil.morphMultiClosing(thresh, morph_iter)
+    contour = moil.selectBiggerCircularContour(closed)
+    if toDraw is not None and contour is not None:
+        cv2.drawContours(toDraw, [contour], -1, (255, 255, 255), 2)
+
     w, h, c = moil.getWidthHeightChannels(pred)
-    #pred = np.uint8(pred * 255)
-    ret, thresh = cv2.threshold(pred, threshold, 255, cv2.THRESH_BINARY)
-    if check:
-        moil.show(thresh)
-    kernel = np.ones((3, 3), np.uint8)
-    dilated = cv2.dilate(thresh, kernel, iterations=morph_iter)
-    if check:
-        moil.show(dilated)
-    eroded = cv2.erode(dilated, kernel, iterations=morph_iter)
-    if check:
-        moil.show(eroded)
-    im2, contours, hierarchy = cv2.findContours(eroded, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-
-    area = 0.0
-    ind = 0
-    i = 0
-
-    for cont in contours:
-        try:
-            cAr = cv2.contourArea(cont)
-            cAr = math.pow(cAr, 1/1.8)
-            arL = cv2.arcLength(cont, True)
-            temp = cAr / arL
-        except:
-            temp = 0
-        if temp > area:
-            area = temp
-            ind = i
-        i += 1
     try:
-        M = cv2.moments(contours[ind])
+        M = cv2.moments(contour)
         cx = int(M['m10'] / M['m00'])
         cy = int(M['m01'] / M['m00'])
-        if toDraw is not None:
-            cv2.drawContours(toDraw, contours, ind, (255, 255, 255), 2)
-        if check:
-            cop = cp.deepcopy(eroded)
-            cv2.drawContours(cop, contours, ind, (0, 255, 255), 2)
-            moil.show(cop)
+
     except Exception as e:
+        print("No contour detected! Guessing for center...")
         cx = int(w / 2)
         cy = int(h / 2)
 
@@ -98,23 +44,19 @@ def centerDiff(pred, true=None, x=None, y=None, width=None, height=None, r=None,
 
         width, height, chan = moil.getWidthHeightChannels(true)
         r = width / 10
-        temp = true.dtype
-        if not true.dtype == np.uint8:
-            true = np.uint8(true * 255)
-        ret, thresh = cv2.threshold(true, threshold, 255, cv2.THRESH_BINARY)
-        if check:
-            moil.show(thresh)
+
+        thresh = moil.getBinaryThreshold(true, threshold)
+
         im2, contours, hierarchy = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-        if check:
-            cop = cp.deepcopy(thresh)
-            cv2.drawContours(cop, contours, 0, (0, 255, 255), 2)
-            moil.show(cop)
+
         try:
             M = cv2.moments(contours[0])
             x = int(M['m10'] / M['m00'])
             y = int(M['m01'] / M['m00'])
         except:
-            return 1
+            print("Bad Ground-truth! Mask in center...")
+            x = int(w / 2)
+            y = int(h / 2)
 
     w_scale = width / w
     h_scale = height / h
@@ -122,48 +64,41 @@ def centerDiff(pred, true=None, x=None, y=None, width=None, height=None, r=None,
     cy = cy * h_scale
 
     dist = np.linalg.norm(np.asarray([cx, cy]) - np.asarray([x, y]))
+    maxDist = np.linalg.norm(np.asarray([w / 2, h / 2]) - np.asarray([x, y]))
 
-    x1 = abs(width - x)
+    DistanceMetric = 1 - dist / maxDist
 
-    y1 = abs(height - y)
+    CrossLength = math.sqrt(width ** 2 + height ** 2)
 
-    xtarg = int(max(x1, x) * 0.9 - 2 * r)
-    ytarg = int(max(y1, y) * 0.9 - 2 * r)
+    DistanceToCross = dist / CrossLength
 
-    max_dist = math.sqrt(xtarg ** 2 + ytarg ** 2)
-    met = (max_dist - dist) / max_dist
+    print("Distance Metric: " + str(DistanceMetric) + ", Relative Distance: " + str(
+        DistanceToCross) + ", Distance: " + str(dist))
 
-    print("Distance met: " + str(met) + ", distance: " + str(dist))
-
-    return met
+    return DistanceMetric
 
 
 # returns binaryDiff for segmented image mask
-def binaryDiff(pred, true, threshold=127, check=False):
-    #pred = np.uint8(pred * 255)
-    if not true.dtype == np.uint8:
-        true = np.uint8(true * 255)
-    ret, thresh = cv2.threshold(pred, threshold, 255, cv2.THRESH_BINARY)
-    ret, threshTrue = cv2.threshold(true, threshold, 255, cv2.THRESH_BINARY)
+def binaryDiff(pred, true, threshold=127):
+    thresh = moil.getBinaryThreshold(pred, threshold)
+    threshTrue = moil.getBinaryThreshold(true, threshold)
 
     unique, counts = np.unique(threshTrue, return_counts=True)
     trueC = dict(zip(unique, counts))
 
     diff = np.int16(threshTrue) - np.int16(thresh)
-    if check:
-        test = np.uint8((diff + 255) / 2)
-        moil.show(test, other_im=[threshTrue, thresh])
+
     unique, counts = np.unique(diff, return_counts=True)
     diffC = dict(zip(unique, counts))
 
     try:
-        TN = trueC[0]
+        Negatives = trueC[0]
     except:
-        TN = 0
+        Negatives = 0
     try:
-        TP = trueC[255]
+        Positives = trueC[255]
     except:
-        TP = 0
+        Positives = 0
 
     try:
         FN = diffC[255]
@@ -174,40 +109,52 @@ def binaryDiff(pred, true, threshold=127, check=False):
     except:
         FP = 0
 
+    TP = Positives - FN
+    TN = Negatives - FP
+
     try:
-        N = (TN - FP) / TN
+        Specifity = TN / Negatives
     except:
-        N = 1
+        Specifity = 1
     try:
-        P = (TP - FN) / TP
+        Sensitivity = TP / Positives
     except:
-        P = 1
+        Sensitivity = 1
 
-    met = (N + P) / 2
+    Accuracy = (TP + TN) / (Positives + Negatives)
+    Jouden = Sensitivity + Specifity - 1
+    print("Jouden Index: " + str(Jouden) + ", Sensivity: " + str(Sensitivity) + ", Specifity: " + str(
+        Specifity) + ", Accuracy: " + str(Accuracy))
+    return Jouden
 
-    print("NP:" + str(met) + ", N: " + str(N) + ", P: " + str(P))
-    return met
 
-
-def customMetric(pred, true, check=False, toDraw=None):
-    bin = binaryDiff(pred, true, check=check)
-    cent = centerDiff(pred, true, check=check, toDraw=toDraw)
+def customMetric(pred, true, toDraw=None):
+    Jouden = binaryDiff(pred, true)
+    Distance = centerDiff(pred, true, toDraw=toDraw)
     jaccard = jaccard_index(true, pred)
-    print("Jaccard: " +str(jaccard))
+
     dice = dice_coefficient(true, pred)
-    print("Dice: " + str(dice))
-    return [bin, cent, jaccard, dice]
+    print("-------------------------")
+    print("Distance Improvement: " + str(Distance) + ", Jouden Index: " + str(Jouden) + ", Jaccard Index: " + str(jaccard) + ", Dice Sorensen coefficient: " + str(dice))
+    print("-------------------------")
+    return [Distance, Jouden, jaccard, dice]
 
 
-def jaccard_index(ground_truth, prediction):
-
+def jaccard_index(ground_truth, prediction, threshold=127):
+    ground_truth = moil.getBinaryThreshold(ground_truth, threshold)
+    prediction = moil.getBinaryThreshold(prediction, threshold)
     intersection = np.logical_and(ground_truth, prediction)
     union = np.logical_or(ground_truth, prediction)
-    return np.sum(intersection) / np.sum(union)
+    jaccard = np.sum(intersection) / np.sum(union)
+    print("Jaccard Index: " + str(jaccard))
+    return jaccard
 
 
-def dice_coefficient(ground_truth, prediction):
-
+def dice_coefficient(ground_truth, prediction, threshold=127):
+    ground_truth = moil.getBinaryThreshold(ground_truth, threshold)
+    prediction = moil.getBinaryThreshold(prediction, threshold)
     intersection = np.logical_and(ground_truth, prediction)
     union = np.logical_or(ground_truth, prediction)
-    return (2 * np.sum(intersection)) / (np.sum(intersection) + np.sum(union))
+    dice = (2 * np.sum(intersection)) / (np.sum(intersection) + np.sum(union))
+    print("Dice Sorensen: " + str(dice))
+    return dice
