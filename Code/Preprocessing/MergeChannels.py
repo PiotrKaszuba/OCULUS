@@ -9,8 +9,8 @@ from Code.Preprocessing import Gradients, LocalBinaryPatterns
 
 class MergeChannels:
     def __init__(self, equalize=False, testMode=False):
-        self.Grad = Gradients.Gradients(equalize=False)
-        self.LBP = LocalBinaryPatterns.LocalBinaryPatterns(40, 3.5, method='default', equalize=True, negative=True)
+        self.Grad = Gradients.Gradients(equalize=True)
+        self.LBP = LocalBinaryPatterns.LocalBinaryPatterns(40, 3.5, method='default', equalize=False, negative=True)
         self.equalize = equalize
         self.testMode = testMode
 
@@ -32,6 +32,6 @@ class MergeChannels:
 
     def MergeOnPath(self, path):
         for i in range(len(os.listdir(path)) - 1):
-            img = moil.read_and_size(str(i), path=path, scale=0.2)
+            img = moil.read_and_size(str(i), path=path, scale=0.3)
             merged = self.Merge(img)
-            moil.show(merged)
+            moil.show(merged, other_im=[img])

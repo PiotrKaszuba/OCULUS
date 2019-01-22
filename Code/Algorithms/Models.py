@@ -87,7 +87,7 @@ class Models:
                     if onlyWithoutMetric and os.path.exists(os.path.join(true_path, str(i) + '.jpg')):
                         continue
 
-                im = self.read_func(name=str(i), path=path, target_size=(self.colDim, self.rowDim), mode=validateMode)
+                im = self.read_func(name=str(i), path=path, target_size=(self.colDim, self.rowDim), mode=0)
                 img = preprocessFunc(im)
                 imgX = img.reshape((1, self.rowDim, self.colDim, self.channels))
                 imgX = imgX / 255

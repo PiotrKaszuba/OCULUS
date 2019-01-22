@@ -25,8 +25,8 @@ if withMetricOrNo == 1:
 if withMetricOrNo == 2:
     onlyWithoutMetric = True
 batch_size = 32
-total_ep = 500
-ep = 1
+total_ep = 1
+ep = 500
 steps = 10
 
 cols, rows = moil.getColsRows(level=image_size_level, base_scale=base_scale)
@@ -98,7 +98,7 @@ if load_weights:
     weights_loaded = Mod.load_weights()
 if not weights_loaded:
     Mod.save_weights()
-
+Mod.plot_loss(500)
 Mod.check_performance(train_generator, times=check_perf_times)
 
 callbacks = md.Callbacks(ModelClass=Mod, save_modulo_epochs=save_modulo, printDecay=printDecay, collectLoss=collectLoss)

@@ -395,7 +395,17 @@ class DirectoryIteratorExtension(image.Iterator):
             img = image.load_img(os.path.join(self.directory, fname),
                                  grayscale=grayscale,
                                  target_size=self.target_size)
+
+
             x = image.img_to_array(img, data_format=self.data_format)
+
+            if not grayscale:
+
+                red = x[:, :, 2].copy()
+                blue = x[:, :, 0]
+
+                x[:, :, 2] = blue
+                x[:, :, 0] = red
 
             if self.class_mode == 'mask':
                 words = fname.split("\\")
@@ -406,12 +416,14 @@ class DirectoryIteratorExtension(image.Iterator):
                                       # todo - cant read more than one channel for label though there is parameter channels_out
                                       target_size=self.target_size)
                 y = image.img_to_array(img2, data_format=self.data_format)
-                x, y = self.image_data_generator.random_transform_extension(x, y)
+                #x, y = self.image_data_generator.random_transform_extension(x, y)
+
                 y = self.image_data_generator.standardize(y)
                 batch_y[i] = y
             else:
                 x = self.image_data_generator.random_transform(x)
             x = self.image_data_generator.standardize(x)
+
             batch_x[i] = x
         # optionally save augmented images to disk for debugging purposes
         if self.save_to_dir:

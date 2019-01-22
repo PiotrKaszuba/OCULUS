@@ -20,7 +20,7 @@ class LocalBinaryPatterns:
         for i in range(len(os.listdir(path)) - 1):
             img = moil.read_and_size(str(i), path=path, scale=self.scale)
             lbp = self.describe(img)
-            moil.show(lbp, other_im=[im])
+            moil.show(lbp, other_im=[img])
             # (fig, ax) = plt.subplots()
             # ax.hist(lbp.ravel(), normed=True, bins=np.arange(0, self.numPoints + 3), range=(0, self.numPoints + 2))
 
@@ -56,8 +56,9 @@ class LocalBinaryPatterns:
         # hist /= (hist.sum() + eps)
 
         # return the histogram of Local Binary Patterns
-        if self.equalize:
-            lbp = cv2.equalizeHist(lbp)
+
         if self.negative:
             lbp = cv2.bitwise_not(lbp)
+        if self.equalize:
+            lbp = cv2.equalizeHist(lbp)
         return lbp

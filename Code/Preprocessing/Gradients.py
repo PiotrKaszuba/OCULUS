@@ -6,7 +6,7 @@ import Code.Libraries.MyOculusImageLib as moil
 
 
 class Gradients:
-    def __init__(self, kernel=3, equalize=False, depth=5, SobelXweight=0.4, SobelYweight=0.4, LaplacianWeight=0.2):
+    def __init__(self, kernel=3, equalize=False, depth=5, SobelXweight=0.4, SobelYweight=0.4, LaplacianWeight=0.2, scale=0):
 
         self.kernel = kernel
         self.equalize = equalize
@@ -14,12 +14,12 @@ class Gradients:
         self.SobelXweight = SobelXweight
         self.SobelYweight = SobelYweight
         self.LaplacianWeight = LaplacianWeight
-
+        self.scale = scale
     def GradientSumOnPath(self, path):
         for i in range(len(os.listdir(path)) - 1):
-            img = moil.read_and_size(str(i), path=path)
+            img = moil.read_and_size(str(i), path=path, scale= self.scale)
             grad = self.getGradientSum(img)
-            moil.show(grad)
+            moil.show(grad, other_im=[img])
 
     def getGradientSum(self, im):
         if self.equalize:
