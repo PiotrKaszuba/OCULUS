@@ -62,7 +62,7 @@ load_weights = True
 save_modulo = 100
 weights_path = "../weights/unet" + TrainModeName
 var_filename = "../weights/var" + TrainModeName + ".txt"
-validate = False
+validate = True
 mer = mc.MergeChannels(True)
 validatePreprocessFunc = mer.Merge
 draw = True
@@ -77,6 +77,7 @@ decay_rate = 4e-04
 printDecay = True
 
 collectLoss = True
+Augment = True
 # setup
 f = dac.ImageDataGeneratorExtension(rotation_range=aug['rotation_range'],
                                     width_shift_range=aug['width_shift_range'],
@@ -84,7 +85,8 @@ f = dac.ImageDataGeneratorExtension(rotation_range=aug['rotation_range'],
                                     zoom_range=aug['zoom_range'],
                                     shear_range=aug['shear_range'],
                                     rescale=aug['rescale'],
-                                    fill_mode=aug['fill_mode'])
+                                    fill_mode=aug['fill_mode'],
+                                    Augment=Augment)
 train_generator = f.flow_from_directory_extension(directory=path, batch_size=batch_size, color_mode=color_mode,
                                                   class_mode=class_mode, target_size=(rows, cols))
 Mod = md.Models(rows, cols, mode=mode, channels=channels_in, show_function=show_function, read_func=read_function,

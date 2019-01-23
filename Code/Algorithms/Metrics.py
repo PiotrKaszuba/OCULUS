@@ -1,7 +1,17 @@
 import math
+
 import cv2
 import numpy as np
+
 import Code.Libraries.MyOculusImageLib as moil
+
+def atrophyRate(img, threshold = 127):
+    img = moil.getBinaryThreshold(img, threshold)
+    unique, counts = np.unique(img, return_counts=True)
+    count  = dict(zip(unique, counts))[255]
+    return count / 20576
+
+
 
 
 # draws contour of one main circle area
@@ -128,16 +138,36 @@ def binaryDiff(pred, true, threshold=127):
     return Jouden
 
 
-def customMetric(pred, true, toDraw=None):
-    Jouden = binaryDiff(pred, true)
-    Distance = centerDiff(pred, true, toDraw=toDraw)
-    jaccard = jaccard_index(true, pred)
-
-    dice = dice_coefficient(true, pred)
+def customMetric(pred, true, toDraw=None, metrics=['distance', 'jouden', 'jaccard', 'dice']):
+    ret = []
+    if 'distance' in metrics:
+        Distance = centerDiff(pred, true, toDraw=toDraw)
+        ret.append(Distance)
+    if 'atrophy' in metrics:
+        atrophy = atrophyRecall(pred, true)
+        ret.append(atrophy)
+    if 'jouden' in metrics:
+        Jouden = binaryDiff(pred, true)
+        ret.append(Jouden)
+    if 'jaccard' in metrics:
+        jaccard = jaccard_index(true, pred)
+        ret.append(jaccard)
+    if 'dice' in metrics:
+        dice = dice_coefficient(true, pred)
+        ret.append(dice)
     print("-------------------------")
-    print("Distance Improvement: " + str(Distance) + ", Jouden Index: " + str(Jouden) + ", Jaccard Index: " + str(jaccard) + ", Dice Sorensen coefficient: " + str(dice))
+    if 'distance' in metrics:
+        print("Distance Improvement: " + str(Distance))
+    if 'atrophy' in metrics:
+        print("Atrophy : " + str(Distance))
+    if 'jouden' in metrics:
+        print("Jouden Index: " + str(Jouden))
+    if 'jaccard' in metrics:
+        print("Jaccard Index: " + str(jaccard))
+    if 'dice' in metrics:
+        print("Dice Sorensen coefficient: " + str(dice))
     print("-------------------------")
-    return [Distance, Jouden, jaccard, dice]
+    return ret
 
 
 def jaccard_index(ground_truth, prediction, threshold=127):

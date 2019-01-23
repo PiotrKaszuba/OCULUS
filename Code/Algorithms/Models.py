@@ -63,8 +63,8 @@ class Models:
         return met.centerDiff(pred, x, y)
 
     def validate(self, pathForce=None, validateMode=0, preprocessFunc=lambda x: x, draw=True, onlyWithMetric=False,
-                 onlyWithoutMetric=False, sumTimes=None):
-        sum = [0, 0, 0, 0]
+                 onlyWithoutMetric=False, sumTimes=None, metrics=['distance', 'jouden', 'jaccard', 'dice']):
+        sum = [0]*len(metrics)
         times = 0
         visited_path = {}
         while True:
@@ -76,18 +76,21 @@ class Models:
                 path = pathForce
             if path is None:
                 break
-            for i in range(50):  # len(os.listdir(path)) - 2):
+            if not os.path.exists(path):
+                continue
+            images = os.listdir(path)
+            for imp in images:  # len(os.listdir(path)) - 2):
 
                 true_path = path + 'mask/'
-                if not os.path.exists(os.path.join(path, str(i) + '.jpg')):
+                if not os.path.exists(os.path.join(path, imp)):
                     continue
-                if onlyWithMetric and not os.path.exists(os.path.join(true_path, str(i) + '.jpg')):
+                if onlyWithMetric and not os.path.exists(os.path.join(true_path, imp)):
                     continue
                 else:
-                    if onlyWithoutMetric and os.path.exists(os.path.join(true_path, str(i) + '.jpg')):
+                    if onlyWithoutMetric and os.path.exists(os.path.join(true_path, imp)):
                         continue
 
-                im = self.read_func(name=str(i), path=path, target_size=(self.colDim, self.rowDim), mode=0)
+                im = self.read_func(name=imp, extension='', path=path, target_size=(self.colDim, self.rowDim), mode=0)
                 img = preprocessFunc(im)
                 imgX = img.reshape((1, self.rowDim, self.colDim, self.channels))
                 imgX = imgX / 255
@@ -98,12 +101,12 @@ class Models:
                 toDraw = im if draw else None
 
                 x = [im, pred, img]
-                if os.path.exists(os.path.join(true_path, str(i) + '.jpg')):
-                    true = self.read_func(name=str(i), path=true_path, target_size=(self.colDim, self.rowDim))
+                if os.path.exists(os.path.join(true_path, imp)):
+                    true = self.read_func(name=imp, extension='', path=true_path, target_size=(self.colDim, self.rowDim))
 
                     true = true.reshape((self.rowDim, self.colDim, self.out_channels))
                     x.append(true)
-                    results = met.customMetric(pred, true, toDraw=toDraw)
+                    results = met.customMetric(pred, true, toDraw=toDraw, metrics=metrics)
                     sum = list(map(add, sum, results))
                     times += 1
                     if sumTimes is not None and times >= sumTimes:
@@ -122,8 +125,9 @@ class Models:
         for val in avgs:
             strgAvgs += str(val) + ', '
         print("Times: " + str(times) + ", sums: " + strgSum + "Average metrics: " + strgAvgs)
+        return avgs
 
-    def check_performance(self, validate_generator, times=1):
+    def check_performance(self, validate_generator, times=1, metrics=['distance', 'jouden', 'jaccard', 'dice']):
         for i in range(times):
             pic = validate_generator.next()
 
@@ -133,7 +137,7 @@ class Models:
             pred = moil.convertImageNetOutput(pred)
             true = moil.convertImageNetOutput(true)
 
-            met.customMetric(pred, true)
+            met.customMetric(pred, true, metrics=metrics)
             x = []
 
             x.append(pic[0][0].reshape((self.rowDim, self.colDim, self.channels)))
@@ -143,7 +147,7 @@ class Models:
             if self.show_function != None:
                 self.show_function(x)
 
-    def var_file(self, read=False):
+    def var_file(self, read=False, increase = 1):
         numb = -1
         if not os.path.isfile(self.var_filename):
             fo = open(self.var_filename, "w")
@@ -156,21 +160,27 @@ class Models:
 
         if read:
             return numb
-        numb += 1
+        if numb < 0:
+            numb =0
+        else:
+            numb += increase
         fo = open(self.var_filename, "w")
         fo.write(str(numb))
         fo.close()
         return numb
 
+    def load_loss(self, epoch):
+        try:
+            with open(self.path + "_losses_" + str(epoch), 'rb') as handle:
+                return pickle.load(handle)
+        except:
+            return None
+
     def plot_loss(self, epoch=None):
         b = None
         if epoch is None:
             epoch = self.var_file(read=True)
-        try:
-            with open(self.path + "_losses_" + str(epoch), 'rb') as handle:
-                b = pickle.load(handle)
-        except:
-            return
+        b = self.load_loss(epoch)
         if b is None:
             return
         plt.plot(list(range(1, epoch + 1)), b, label="loss")
@@ -250,14 +260,24 @@ class Models:
 
 class Callbacks(keras.callbacks.Callback):
 
-    def __init__(self, ModelClass, save_modulo_epochs=None, collectLoss=False, printDecay=False):
+    def __init__(self, ModelClass, save_modulo_epochs=None, collectLoss=False, printDecay=False, message=None):
         self.ModelClass = ModelClass
         self.save_modulo_epochs = save_modulo_epochs
         self.printDecay = printDecay
         self.collectLoss = collectLoss
-        self.losses = []
+        try:
+            epoch = ModelClass.var_file(read=True)
+            losses = ModelClass.load_loss(epoch)
+        except:
+            losses = []
+        if losses is None:
+            losses = []
+        self.losses = losses
+        self.message = message
 
     def on_epoch_end(self, epoch, logs={}):
+        if self.message is not None:
+            print(self.message)
         if self.printDecay:
             lr = self.model.optimizer.lr
             decay = self.model.optimizer.decay

@@ -12,11 +12,10 @@ from Code.Algorithms import Models as md
 from Code.Libraries import MyOculusImageLib as moil
 from Code.Libraries import MyOculusRepoNav as morn
 from Code.Preprocessing import DataAugmentationClasses as dac
-
 # params
 base_path = '../'
-image_size_level = 20
-base_scale = 0.75
+image_size_level = 10
+base_scale = 1.0
 withMetricOrNo = 1
 onlyWithMetric = False
 onlyWithoutMetric = False
@@ -25,8 +24,8 @@ if withMetricOrNo == 1:
 if withMetricOrNo == 2:
     onlyWithoutMetric = True
 batch_size = 32
-total_ep = 500
-ep = 1
+total_ep = 1
+ep = 500
 steps = 10
 
 cols, rows = moil.getColsRows(level=image_size_level, base_scale=base_scale)
@@ -42,7 +41,7 @@ else:
     color_mode = 'rgb'
 
 # data augmentation
-aug = dac.getAugmentationParams()
+aug = dac.getAugmentationParamsZanik()
 
 FeatureName = "Zanik"
 TrainModeName = FeatureName + "Gray50"
@@ -56,24 +55,25 @@ show_function = md.Models.model_show_function
 read_function = moil.read_and_size
 validate_path_provider_func = morn.next_path
 validate_start_path = base_path + 'Images/' + FeatureName + 'Validate/'
-filters = 12
+filters = 10
 
 load_weights = True
 save_modulo = 100
 weights_path = "../weights/unet" + TrainModeName
 var_filename = "../weights/var" + TrainModeName + ".txt"
 validate = False
+metrics = ["jouden"]
 # mer = mc.MergeChannels(True)
 validatePreprocessFunc = lambda x: x
 draw = False
-sumTimes = None
+sumTimes = 10
 
-check_perf_times = 5
+check_perf_times = 0
 check_perf_times_in_loop = 0
 loop_modulo = 1
 
 learn_rate = 3e-04
-decay_rate = 4e-04
+decay_rate = 5e-04
 printDecay = True
 
 collectLoss = True
@@ -105,7 +105,7 @@ callbacks = md.Callbacks(ModelClass=Mod, save_modulo_epochs=save_modulo, printDe
 # go
 if validate:
     Mod.validate(validateMode=mode, preprocessFunc=validatePreprocessFunc, draw=draw, onlyWithMetric=onlyWithMetric,
-                 onlyWithoutMetric=onlyWithoutMetric, sumTimes=sumTimes)
+                 onlyWithoutMetric=onlyWithoutMetric, sumTimes=sumTimes, metrics=metrics)
 else:
     for loop in range(total_ep):
         i = loop + 1

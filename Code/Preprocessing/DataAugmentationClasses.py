@@ -9,6 +9,17 @@ import scipy.ndimage as ndi
 from keras import backend as K
 
 
+def getAugmentationParamsZanik():
+    return {
+        "rotation_range": 8.0,
+        "width_shift_range": 0.06,
+        "height_shift_range": 0.06,
+        "zoom_range": 0.08,
+        "shear_range": 0.05,
+        "rescale": 1. / 255,
+        "fill_mode": 'constant'
+    }
+
 def getAugmentationParams():
     return {
         "rotation_range": 5.0,
@@ -19,7 +30,6 @@ def getAugmentationParams():
         "rescale": 1. / 255,
         "fill_mode": 'constant'
     }
-
 
 def apply_transform(x,
                     transform_matrix,
@@ -149,8 +159,9 @@ class ImageDataGeneratorExtension(image.ImageDataGenerator):
                  vertical_flip=False,
                  rescale=None,
                  preprocessing_function=None,
-                 data_format=None):
-
+                 data_format=None,
+                 Augment = True):
+        self.Augment = Augment
         super(ImageDataGeneratorExtension, self).__init__(
             featurewise_center=featurewise_center,
             samplewise_center=samplewise_center,
@@ -406,7 +417,8 @@ class DirectoryIteratorExtension(image.Iterator):
 
                 x[:, :, 2] = blue
                 x[:, :, 0] = red
-
+            #import Code.Libraries.MyOculusImageLib as moil
+            #f = x.copy()
             if self.class_mode == 'mask':
                 words = fname.split("\\")
                 words.insert(-1, "mask")
@@ -416,14 +428,16 @@ class DirectoryIteratorExtension(image.Iterator):
                                       # todo - cant read more than one channel for label though there is parameter channels_out
                                       target_size=self.target_size)
                 y = image.img_to_array(img2, data_format=self.data_format)
-                #x, y = self.image_data_generator.random_transform_extension(x, y)
+                if self.image_data_generator.Augment:
+                    x, y = self.image_data_generator.random_transform_extension(x, y)
 
                 y = self.image_data_generator.standardize(y)
                 batch_y[i] = y
             else:
-                x = self.image_data_generator.random_transform(x)
+                if self.image_data_generator.Augment:
+                    x = self.image_data_generator.random_transform(x)
             x = self.image_data_generator.standardize(x)
-
+            #moil.show(x, other_im=[f/255])
             batch_x[i] = x
         # optionally save augmented images to disk for debugging purposes
         if self.save_to_dir:

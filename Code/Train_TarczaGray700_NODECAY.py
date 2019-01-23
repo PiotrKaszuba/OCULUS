@@ -26,7 +26,7 @@ if withMetricOrNo == 2:
     onlyWithoutMetric = True
 batch_size = 32
 total_ep = 1
-ep = 500
+ep = 1000
 steps = 10
 
 cols, rows = moil.getColsRows(level=image_size_level, base_scale=base_scale)
@@ -45,9 +45,9 @@ else:
 aug = dac.getAugmentationParams()
 
 FeatureName = "Tarcza"
-TrainModeName = FeatureName + "Gray700"
+TrainModeName = FeatureName + "Gray700_NODECAY"
 
-path = base_path + 'Images/' + TrainModeName + '/'
+path = base_path + 'Images/' + TrainModeName[:-8] + '/'
 
 class_mode = 'mask'
 
@@ -72,8 +72,8 @@ check_perf_times = 0
 check_perf_times_in_loop = 0
 loop_modulo = 1
 
-learn_rate = 3e-04
-decay_rate = 4e-04
+learn_rate = 2e-04
+decay_rate = 0
 printDecay = True
 
 collectLoss = True
@@ -98,7 +98,7 @@ if load_weights:
     weights_loaded = Mod.load_weights()
 if not weights_loaded:
     Mod.save_weights()
-Mod.plot_loss(1000)
+#Mod.plot_loss(1000)
 Mod.check_performance(train_generator, times=check_perf_times)
 
 callbacks = md.Callbacks(ModelClass=Mod, save_modulo_epochs=save_modulo, printDecay=printDecay, collectLoss=collectLoss)
