@@ -8,7 +8,10 @@ import Code.Libraries.MyOculusImageLib as moil
 def atrophyRate(img, threshold = 127):
     img = moil.getBinaryThreshold(img, threshold)
     unique, counts = np.unique(img, return_counts=True)
-    count  = dict(zip(unique, counts))[255]
+    try:
+        count  = dict(zip(unique, counts))[255]
+    except:
+        count = 0
     return count / 20576
 
 
@@ -89,7 +92,7 @@ def centerDiff(pred, true=None, x=None, y=None, width=None, height=None, r=None,
 
 
 # returns binaryDiff for segmented image mask
-def binaryDiff(pred, true, threshold=127):
+def binaryDiff(pred, true, threshold=127, globalCount=False):
     thresh = moil.getBinaryThreshold(pred, threshold)
     threshTrue = moil.getBinaryThreshold(true, threshold)
 
@@ -131,35 +134,52 @@ def binaryDiff(pred, true, threshold=127):
     except:
         Sensitivity = 1
 
+
     Accuracy = (TP + TN) / (Positives + Negatives)
     Jouden = Sensitivity + Specifity - 1
     print("Jouden Index: " + str(Jouden) + ", Sensivity: " + str(Sensitivity) + ", Specifity: " + str(
-        Specifity) + ", Accuracy: " + str(Accuracy))
+        Specifity) + ", Accuracy: " + str(Accuracy) )
+    if globalCount:
+        return [TP, FN, FP, TN]
     return Jouden
 
+def globals(confusion_matrix):
+    TP, FN, FP, TN = confusion_matrix
+    try:
+        precision = TP / (TP + FP)
+        Sensitivity = TP /(TP + FN)
+        pseudo_dice = 2*precision*Sensitivity/(precision+Sensitivity)
+        pseudo_jaccard = precision * Sensitivity / ((precision + Sensitivity) - (precision * Sensitivity))
+    except:
+        pseudo_dice = -100
+        pseudo_jaccard = -100
 
-def customMetric(pred, true, toDraw=None, metrics=['distance', 'jouden', 'jaccard', 'dice']):
+    return [pseudo_jaccard, pseudo_dice]
+
+
+def customMetric(pred, true, toDraw=None, metrics=['distance', 'jouden', 'jaccard', 'dice'], globalCount=False, threshold = 127):
     ret = []
-    if 'distance' in metrics:
-        Distance = centerDiff(pred, true, toDraw=toDraw)
-        ret.append(Distance)
+    glob = [0]*4
+    if globalCount:
+        glob = binaryDiff(pred, true, threshold=threshold, globalCount=globalCount)
     if 'atrophy' in metrics:
-        atrophy = atrophyRecall(pred, true)
-        ret.append(atrophy)
+        print("Predicted Atrophy rate: " +str(atrophyRate(pred, threshold=threshold)))
+        print("True Atrophy rate: " + str(atrophyRate(true, threshold=threshold)))
+    if 'distance' in metrics:
+        Distance = centerDiff(pred, true, threshold=threshold, toDraw=toDraw)
+        ret.append(Distance)
     if 'jouden' in metrics:
-        Jouden = binaryDiff(pred, true)
+        Jouden = binaryDiff(pred, true, threshold=threshold)
         ret.append(Jouden)
     if 'jaccard' in metrics:
-        jaccard = jaccard_index(true, pred)
+        jaccard = jaccard_index(true, pred, threshold=threshold)
         ret.append(jaccard)
     if 'dice' in metrics:
-        dice = dice_coefficient(true, pred)
+        dice = dice_coefficient(true, pred, threshold=threshold)
         ret.append(dice)
     print("-------------------------")
     if 'distance' in metrics:
         print("Distance Improvement: " + str(Distance))
-    if 'atrophy' in metrics:
-        print("Atrophy : " + str(Distance))
     if 'jouden' in metrics:
         print("Jouden Index: " + str(Jouden))
     if 'jaccard' in metrics:
@@ -167,7 +187,7 @@ def customMetric(pred, true, toDraw=None, metrics=['distance', 'jouden', 'jaccar
     if 'dice' in metrics:
         print("Dice Sorensen coefficient: " + str(dice))
     print("-------------------------")
-    return ret
+    return [ret, glob]
 
 
 def jaccard_index(ground_truth, prediction, threshold=127):

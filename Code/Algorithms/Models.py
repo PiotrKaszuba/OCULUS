@@ -65,6 +65,11 @@ class Models:
     def validate(self, pathForce=None, validateMode=0, preprocessFunc=lambda x: x, draw=True, onlyWithMetric=False,
                  onlyWithoutMetric=False, sumTimes=None, metrics=['distance', 'jouden', 'jaccard', 'dice']):
         sum = [0]*len(metrics)
+        confusion_matrix=[0]*4
+        globalCount = False
+        for metr in metrics:
+            if 'global' in metr:
+                globalCount = True
         times = 0
         visited_path = {}
         while True:
@@ -106,8 +111,11 @@ class Models:
 
                     true = true.reshape((self.rowDim, self.colDim, self.out_channels))
                     x.append(true)
-                    results = met.customMetric(pred, true, toDraw=toDraw, metrics=metrics)
-                    sum = list(map(add, sum, results))
+                    results = met.customMetric(pred, true, toDraw=toDraw, metrics=metrics, globalCount=globalCount)
+                    sum = list(map(add, sum, results[0]))
+
+                    confusion_matrix = list(map(add, confusion_matrix, results[1]))
+
                     times += 1
                     if sumTimes is not None and times >= sumTimes:
                         break
@@ -124,8 +132,13 @@ class Models:
             strgSum += str(val) + ', '
         for val in avgs:
             strgAvgs += str(val) + ', '
+
+        globals = []
+        if globalCount:
+            globals = met.globals(confusion_matrix)
+            print("Global Jaccard: " + str(globals[0]) + ", Global Dice: " + str(globals[1]))
         print("Times: " + str(times) + ", sums: " + strgSum + "Average metrics: " + strgAvgs)
-        return avgs
+        return avgs+globals
 
     def check_performance(self, validate_generator, times=1, metrics=['distance', 'jouden', 'jaccard', 'dice']):
         for i in range(times):

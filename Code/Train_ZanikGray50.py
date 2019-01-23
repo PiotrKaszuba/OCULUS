@@ -54,19 +54,19 @@ class_mode = 'mask'
 show_function = md.Models.model_show_function
 read_function = moil.read_and_size
 validate_path_provider_func = morn.next_path
-validate_start_path = base_path + 'Images/' + FeatureName + 'Validate/'
+validate_start_path = path
 filters = 10
 
 load_weights = True
 save_modulo = 100
 weights_path = "../weights/unet" + TrainModeName
 var_filename = "../weights/var" + TrainModeName + ".txt"
-validate = False
-metrics = ["jouden"]
+validate = True
+metrics = ["jouden", "global", 'atrophy']
 # mer = mc.MergeChannels(True)
 validatePreprocessFunc = lambda x: x
 draw = False
-sumTimes = 10
+sumTimes = None
 
 check_perf_times = 0
 check_perf_times_in_loop = 0

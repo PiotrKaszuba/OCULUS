@@ -61,11 +61,11 @@ load_weights = True
 save_modulo = 100
 
 validate = True
-metrics = ["jouden"]
+metrics = ["jouden", "global", 'atrophy']
 # mer = mc.MergeChannels(True)
 validatePreprocessFunc = lambda x: x
 draw = False
-sumTimes = 10
+sumTimes = None
 
 check_perf_times = 0
 check_perf_times_in_loop = 0
@@ -87,6 +87,7 @@ f = dac.ImageDataGeneratorExtension(rotation_range=aug['rotation_range'],
 
 
 CrossTimes = 5
+
 sum = [0]*len(metrics)
 for j in range(CrossTimes):
 
