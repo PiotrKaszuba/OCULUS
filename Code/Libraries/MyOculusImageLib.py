@@ -5,6 +5,17 @@ import cv2
 import numpy as np
 
 
+def stackImageChannels(image, original_channel=0, channels=3):
+    w, h, c = getWidthHeightChannels(image)
+    image = image.reshape(h, w, c)
+    array = np.zeros((h, w, channels), dtype=image.dtype)
+
+    for i in range(channels):
+        array[:, :, i] = image[:, :, original_channel]
+
+    return array
+
+
 def morphMultiClosing(image, iterations=0, kernel=None):
     if kernel is None:
         kernel = np.ones((3, 3), np.uint8)
@@ -145,6 +156,37 @@ def modify_h_div_w(img, h_div_w, modify_height=False, not_modified_dim_wanted_va
         w = int(h / h_div_w)
     img = cv2.resize(img, (w, h))
     return img
+
+
+def addToRegionOfInterest(image, x, y, HalfWidth, HalfHeight, Add):
+    w, h, c = getWidthHeightChannels(image)
+    shapeLen = len(np.shape(image))
+
+    if shapeLen == 2:
+        template = np.zeros(shape=(h + 2 * HalfHeight, w + 2 * HalfWidth), dtype=image.dtype)
+        template[HalfHeight:HalfHeight + h, HalfWidth:HalfWidth + w] = image
+        template[y:y + 2 * HalfHeight, x:x + 2 * HalfWidth] = Add
+
+    else:
+        template = np.zeros(shape=(h + 2 * HalfHeight, w + 2 * HalfWidth, c), dtype=image.dtype)
+        template[HalfHeight:HalfHeight + h, HalfWidth:HalfWidth + w, :] = image
+        template[y:y + 2 * HalfHeight, x:x + 2 * HalfWidth, :] = Add
+
+    return template[HalfHeight:HalfHeight + h, HalfWidth:HalfWidth + w]
+
+
+def getRegionOfInterest(image, x, y, HalfWidth, HalfHeight):
+    w, h, c = getWidthHeightChannels(image)
+    shapeLen = len(np.shape(image))
+
+    if shapeLen == 2:
+        template = np.zeros(shape=(h + 2 * HalfHeight, w + 2 * HalfWidth), dtype=image.dtype)
+        template[HalfHeight:HalfHeight + h, HalfWidth:HalfWidth + w] = image
+    else:
+        template = np.zeros(shape=(h + 2 * HalfHeight, w + 2 * HalfWidth, c), dtype=image.dtype)
+        template[HalfHeight:HalfHeight + h, HalfWidth:HalfWidth + w, :] = image
+
+    return template[y:y + 2 * HalfHeight, x:x + 2 * HalfWidth]
 
 
 # read image of name and extension in path

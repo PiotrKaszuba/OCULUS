@@ -66,7 +66,7 @@ validate = True
 mer = mc.MergeChannels(True)
 validatePreprocessFunc = mer.Merge
 draw = True
-sumTimes = 100
+sumTimes = None
 
 check_perf_times = 0
 check_perf_times_in_loop = 0
@@ -91,9 +91,10 @@ train_generator = f.flow_from_directory_extension(directory=path, batch_size=bat
                                                   class_mode=class_mode, target_size=(rows, cols))
 Mod = md.Models(rows, cols, mode=mode, channels=channels_in, show_function=show_function, read_func=read_function,
                 validate_path_provider_func=validate_path_provider_func, validate_start_path=validate_start_path,
-                weights_path=weights_path, var_filename=var_filename)
+                weights_path=weights_path, var_filename=var_filename, preprocessFunc= validatePreprocessFunc)
 
 # model creation
+
 model = Mod.get_model(filters=filters, le=learn_rate, decay=decay_rate)
 weights_loaded = False
 if load_weights:

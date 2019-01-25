@@ -18,7 +18,7 @@ def atrophyRate(img, threshold = 127):
 
 
 # draws contour of one main circle area
-def draw(pred, toDraw, morph_iter=0, threshold=127):
+def draw(pred, toDraw, morph_iter=0, threshold=127, thickness=2):
     thresh = moil.getBinaryThreshold(pred, threshold)
 
     closed = moil.morphMultiClosing(thresh, morph_iter)
@@ -26,7 +26,29 @@ def draw(pred, toDraw, morph_iter=0, threshold=127):
     contour = moil.selectBiggerCircularContour(closed)
 
     if toDraw is not None and contour is not None:
-        cv2.drawContours(toDraw, [contour], -1, (255, 255, 255), 2)
+        cv2.drawContours(toDraw, [contour], -1, (0, 0, 255), thickness)
+
+
+def getCenter(pred, widthRef, heightRef, morph_iter=0, threshold=127):
+    thresh = moil.getBinaryThreshold(pred, threshold)
+
+    closed = moil.morphMultiClosing(thresh, morph_iter)
+    contour = moil.selectBiggerCircularContour(closed)
+    w, h, c = moil.getWidthHeightChannels(pred)
+    try:
+        M = cv2.moments(contour)
+        cx = int(M['m10'] / M['m00'])
+        cy = int(M['m01'] / M['m00'])
+
+    except Exception as e:
+        print("No contour detected! Guessing for center...")
+        cx = int(w / 2)
+        cy = int(h / 2)
+    w_scale = widthRef / w
+    h_scale = heightRef / h
+    cx = cx * w_scale
+    cy = cy * h_scale
+    return cx, cy
 
 
 # seeks for main circle area and returns centerDiff metric for this circle
@@ -40,7 +62,7 @@ def centerDiff(pred, true=None, x=None, y=None, width=None, height=None, r=None,
     closed = moil.morphMultiClosing(thresh, morph_iter)
     contour = moil.selectBiggerCircularContour(closed)
     if toDraw is not None and contour is not None:
-        cv2.drawContours(toDraw, [contour], -1, (255, 255, 255), 2)
+        cv2.drawContours(toDraw, [contour], -1, (255, 255, 255), 1)
 
     w, h, c = moil.getWidthHeightChannels(pred)
     try:

@@ -1,7 +1,7 @@
 import os
 import pickle
 from operator import add
-
+import cv2
 import keras
 from keras.layers import concatenate, Conv2D, MaxPooling2D, UpSampling2D, Dropout
 # os.environ["CUDA_VISIBLE_DEVICES"] = "0"
@@ -24,7 +24,7 @@ class Models:
 
     def __init__(self, rowDim, colDim, mode=0, channels=1, out_channels=1, modify_col=False, row_div_col=0,
                  weights_path="../weights/unet", var_filename="../weights/var.txt", show_function=None, read_func=None,
-                 validate_path_provider_func=None, validate_start_path=None):
+                 validate_path_provider_func=None, validate_start_path=None, preprocessFunc = lambda x:x):
         self.model = None
         self.path = weights_path
         self.var_filename = var_filename
@@ -38,7 +38,7 @@ class Models:
         self.read_func = read_func
         self.validate_path_provider_func = validate_path_provider_func
         self.validate_start_path = validate_start_path
-
+        self.preprocessFunc = preprocessFunc
         if row_div_col > 0:
             if modify_col:
                 self.colDim = int(rowDim / row_div_col)
@@ -62,6 +62,24 @@ class Models:
     def centerDiffMetric(pred, x, y):
         return met.centerDiff(pred, x, y)
 
+    def predict(self, im):
+        w, h, c = moil.getWidthHeightChannels(im)
+
+        if w != self.colDim or h!= self.rowDim or c!=self.channels:
+            im = cv2.resize(im, (self.colDim, self.rowDim))[:, :]
+        im = self.prepareImage(im)
+        im = self.model.predict(im)
+        im = moil.convertImageNetOutput(im)
+        return im
+    def prepareImage(self, im,  retboth = False):
+        img = self.preprocessFunc(im)
+        imgX = img.reshape((1, self.rowDim, self.colDim, self.channels))
+        imgX = imgX / 255
+        if retboth:
+            return imgX, img
+        return imgX
+    def readImage(self, name, path, extension=".jpg"):
+        return self.read_func(name=name, extension=extension, path=path, target_size=(self.colDim, self.rowDim), mode=0)
     def validate(self, pathForce=None, validateMode=0, preprocessFunc=lambda x: x, draw=True, onlyWithMetric=False,
                  onlyWithoutMetric=False, sumTimes=None, metrics=['distance', 'jouden', 'jaccard', 'dice']):
         sum = [0]*len(metrics)
@@ -96,9 +114,7 @@ class Models:
                         continue
 
                 im = self.read_func(name=imp, extension='', path=path, target_size=(self.colDim, self.rowDim), mode=0)
-                img = preprocessFunc(im)
-                imgX = img.reshape((1, self.rowDim, self.colDim, self.channels))
-                imgX = imgX / 255
+                imgX, img = self.prepareImage(im,  retboth=True)
                 pred = self.model.predict(imgX)
 
                 pred = moil.convertImageNetOutput(pred)
