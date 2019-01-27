@@ -2,30 +2,35 @@ import matplotlib.pyplot as plt
 
 import Code.Libraries.MyOculusCsvLib as mocl
 import numpy as np
+import itertools
 
 
-
-def visualizePlot(scoreIndex):
-    scores = mocl.getScoresList("../../weights/scoresSAB700.csv")
+def visualizePlot(scoreIndex, averaging=False):
+    scores = mocl.getScoresList("../../weights/scoresZanik.csv")
     names = []
 
     data = []
-    base_name = scores[0][0][10:16]
+    base_name = scores[0][0][9:16]
     for score in scores:
-        if score[0][10:] not in names:
+        if score[0][9:] not in names:
             data.append([float(x) for x in score[1:]])
-            names.append(score[0][17:-2])
+            tempName = score[0][15:-2]
+            #tempName = tempName[:5] + tempName[-1]
+            names.append(tempName)
     l = (sorted(zip(names, data), key=lambda pair: pair[0]))
 
     names, data = [list(t) for t in zip(*l)]
     #names, data = [y for x, y in (sorted(zip(names, data), key=lambda pair: pair[0]))]
     data = [['%.3f' % j for j in i] for i in data]
 
-    chunks = 11
+    chunks = 6
     data = [data[i:i + chunks] for i in range(0, len(data), chunks)]
 
     names = [names[i:i + chunks] for i in range(0, len(names), chunks)]
-    color = ['b', 'm', 'g', 'r']
+
+    color = ['b', 'm', 'g', 'r', 'c', 'k']
+    sums = [[0, 0, 0] for x in range(chunks)]
+
     for i in range(len(data)):
         print(i)
         name = names[i][0]
@@ -38,15 +43,37 @@ def visualizePlot(scoreIndex):
                 if j == 0:
                     continue
                 temp.append(float(data[i][j][k]))
+                sums[j][k] = sums[j][k] + float(data[i][j][k])
             l = list(np.arange(chunks-1) * 100+100)
             if not named:
                 plt.plot(l, temp, label=name, color=color[i])
                 named = True
             else:
                 plt.plot(l, temp, color=color[i])
+    if averaging:
+        for k in scoreIndex:
+            temp = []
+            for j in range(len(sums)):
+                if j == 0:
+                    continue
+                sums[j][k] /= len(data)
+                sums[j][k] = float('%.3f' % sums[j][k])
+                temp.append(sums[j][k])
+            l = list(np.arange(chunks - 1) * 100 + 100)
+            plt.plot(l, temp, label='Average', color='k')
+    sums = sums[1:]
     plt.legend()
-    plt.title("Średni dystans od środka tarczy")
-    plt.text(x=480, y=1.3, s='Ilość epok', fontdict={'size': 10})
+    plt.title("Globalny indeks Youdena")
+    plt.text(x=275, y=-0.02, s='Ilość epok', fontdict={'size': 10})
+
+    fig, axs = plt.subplots(2, 1)
+    axs[0].axis('tight')
+    axs[0].axis('off')
+    table = axs[0].table(colLabels=['G. Youden', 'G. Jaccard', 'G. Dice'], loc='center', cellText=sums, rowLabels=['100', '200', '300', '400', '500'],
+                          rowLoc='right', cellLoc='right', cellColours=[['w']*3, ['w']*3, ['g']*3 ,['w']*3 ,['w']*3], rowColours=['w', 'w', 'g', 'w', 'w']
+                         )
+    table.set_fontsize(12)
+    table.scale(0.8, 1.4)
     plt.show()
 
 
@@ -121,4 +148,4 @@ def visualizeBar(scoreIndex, title):
 if __name__ == "__main__":
     # visualizeBar(1, "Średni dystans od środka tarczy")
     # visualizeTable()
-    visualizePlot([0])
+    visualizePlot([0], True)

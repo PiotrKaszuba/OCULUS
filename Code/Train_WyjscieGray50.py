@@ -44,9 +44,9 @@ else:
 aug = dac.getAugmentationParamsZanik()
 
 FeatureName = "Wyjscie"
-TrainModeName = FeatureName + "Gray50"
+TrainModeName = FeatureName + "Gray125"
 
-path = base_path + 'Images/' + TrainModeName + '/'
+path = base_path + 'Images/' + TrainModeName[:-3] + '50/'
 
 class_mode = 'mask'
 
@@ -55,7 +55,7 @@ show_function = md.Models.model_show_function
 read_function = moil.read_and_size
 validate_path_provider_func = morn.next_path
 validate_start_path = base_path+'Images/'+FeatureName+'Validate/'
-filters = 10
+filters = 8
 
 load_weights = True
 save_modulo = 100
@@ -66,7 +66,7 @@ metrics = ["jouden", "global", 'atrophy']
 # mer = mc.MergeChannels(True)
 validatePreprocessFunc = lambda x: x
 draw = False
-sumTimes = None
+sumTimes = 30
 
 check_perf_times = 3
 check_perf_times_in_loop = 0
