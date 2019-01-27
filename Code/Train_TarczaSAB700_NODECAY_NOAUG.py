@@ -62,7 +62,7 @@ load_weights = True
 save_modulo = 100
 weights_path = "../weights/unet" + TrainModeName
 var_filename = "../weights/var" + TrainModeName + ".txt"
-validate = False
+validate = True
 mer = mc.MergeChannels(True)
 validatePreprocessFunc = mer.Merge
 draw = True
@@ -101,7 +101,7 @@ if load_weights:
     weights_loaded = Mod.load_weights()
 if not weights_loaded:
     Mod.save_weights()
-Mod.plot_loss(500)
+Mod.plot_loss(1000)
 Mod.check_performance(train_generator, times=check_perf_times)
 
 callbacks = md.Callbacks(ModelClass=Mod, save_modulo_epochs=save_modulo, printDecay=printDecay, collectLoss=collectLoss)
@@ -109,7 +109,7 @@ callbacks = md.Callbacks(ModelClass=Mod, save_modulo_epochs=save_modulo, printDe
 # go
 if validate:
     Mod.validate(validateMode=mode, preprocessFunc=validatePreprocessFunc, draw=draw, onlyWithMetric=onlyWithMetric,
-                 onlyWithoutMetric=onlyWithoutMetric, sumTimes=sumTimes)
+                 onlyWithoutMetric=onlyWithoutMetric, sumTimes=sumTimes, validTimes=11, validName='SAB700', weightsTimesValids=100)
 else:
     for loop in range(total_ep):
         i = loop + 1

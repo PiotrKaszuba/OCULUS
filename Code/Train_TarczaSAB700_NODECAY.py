@@ -66,7 +66,7 @@ validate = True
 mer = mc.MergeChannels(True)
 validatePreprocessFunc = mer.Merge
 draw = True
-sumTimes = 100
+sumTimes = None
 
 check_perf_times = 0
 check_perf_times_in_loop = 0
@@ -109,7 +109,7 @@ callbacks = md.Callbacks(ModelClass=Mod, save_modulo_epochs=save_modulo, printDe
 # go
 if validate:
     Mod.validate(validateMode=mode, preprocessFunc=validatePreprocessFunc, draw=draw, onlyWithMetric=onlyWithMetric,
-                 onlyWithoutMetric=onlyWithoutMetric, sumTimes=sumTimes)
+                 onlyWithoutMetric=onlyWithoutMetric, sumTimes=sumTimes, validTimes=1, validName='SAB700', weightsTimesValids=None)
 else:
     for loop in range(total_ep):
         i = loop + 1

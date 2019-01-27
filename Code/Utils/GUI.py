@@ -59,7 +59,7 @@ class GUI:
 
     def loadModels(self):
         self.mer = mc.MergeChannels(equalize=True)
-        self.Mod = cm.createOpticDiscModel("SAB700", gray=False, preprocessFunc=self.mer.Merge)
+        self.Mod = cm.createOpticDiscModel("SAB700_NODECAY", gray=False, preprocessFunc=self.mer.Merge)
         self.Mod.model.predict(
             np.zeros(shape=(1, self.Mod.rowDim, self.Mod.colDim, self.Mod.channels), dtype=np.float32))
         self.ModAtrophy = cm.createAtophyModel("Gray50")

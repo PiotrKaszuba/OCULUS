@@ -1,6 +1,7 @@
 import os
 import pickle
 from operator import add
+
 import cv2
 import keras
 from keras.layers import concatenate, Conv2D, MaxPooling2D, UpSampling2D, Dropout
@@ -10,8 +11,9 @@ from keras.optimizers import *
 from matplotlib import pyplot as plt
 
 import Code.Algorithms.Metrics as met
-import Code.Libraries.MyOculusImageLib as moil
 import Code.Libraries.MyOculusCsvLib as mocl
+import Code.Libraries.MyOculusImageLib as moil
+
 
 class Models:
 
@@ -24,7 +26,8 @@ class Models:
 
     def __init__(self, rowDim, colDim, mode=0, channels=1, out_channels=1, modify_col=False, row_div_col=0,
                  weights_path="../weights/unet", var_filename="../weights/var.txt", show_function=None, read_func=None,
-                 validate_path_provider_func=None, validate_start_path=None, preprocessFunc = lambda x:x, constantVar = None):
+                 validate_path_provider_func=None, validate_start_path=None, preprocessFunc=lambda x: x,
+                 constantVar=None):
         self.model = None
         self.constantVar = constantVar
         self.path = weights_path
@@ -46,8 +49,8 @@ class Models:
             else:
                 self.rowDim = int(colDim * row_div_col)
 
-    def save_weights(self):
-        self.model.save_weights(self.path + '_' + str(self.var_file()))
+    def save_weights(self, increase=1):
+        self.model.save_weights(self.path + '_' + str(self.var_file(increase)))
 
     def load_weights(self):
         try:
@@ -66,30 +69,34 @@ class Models:
     def predict(self, im):
         w, h, c = moil.getWidthHeightChannels(im)
 
-        if w != self.colDim or h!= self.rowDim or c!=self.channels:
+        if w != self.colDim or h != self.rowDim or c != self.channels:
             im = cv2.resize(im, (self.colDim, self.rowDim))[:, :]
         im = self.prepareImage(im)
         im = self.model.predict(im)
         im = moil.convertImageNetOutput(im)
         return im
-    def prepareImage(self, im,  retboth = False):
+
+    def prepareImage(self, im, retboth=False):
         img = self.preprocessFunc(im)
         imgX = img.reshape((1, self.rowDim, self.colDim, self.channels))
         imgX = imgX / 255
         if retboth:
             return imgX, img
         return imgX
+
     def readImage(self, name, path, extension=".jpg"):
         return self.read_func(name=name, extension=extension, path=path, target_size=(self.colDim, self.rowDim), mode=0)
+
     def validate(self, pathForce=None, validateMode=0, preprocessFunc=lambda x: x, draw=True, onlyWithMetric=False,
-                 onlyWithoutMetric=False, sumTimes=None, metrics=['distance', 'youden', 'jaccard', 'dice'], validTimes=1, weightsTimesValids=None):
+                 onlyWithoutMetric=False, sumTimes=None, metrics=['distance', 'youden', 'jaccard', 'dice'],
+                 validTimes=1, weightsTimesValids=None, validName=''):
         avgs, globals = (0, 0)
         for i in range(validTimes):
             if weightsTimesValids is not None:
                 self.constantVar = i * weightsTimesValids
                 self.load_weights()
-            sum = [0]*len(metrics)
-            confusion_matrix=[0]*4
+            sum = [0] * len(metrics)
+            confusion_matrix = [0] * 4
             globalCount = False
             for metr in metrics:
                 if 'global' in metr:
@@ -119,8 +126,9 @@ class Models:
                         if onlyWithoutMetric and os.path.exists(os.path.join(true_path, imp)):
                             continue
 
-                    im = self.read_func(name=imp, extension='', path=path, target_size=(self.colDim, self.rowDim), mode=0)
-                    imgX, img = self.prepareImage(im,  retboth=True)
+                    im = self.read_func(name=imp, extension='', path=path, target_size=(self.colDim, self.rowDim),
+                                        mode=0)
+                    imgX, img = self.prepareImage(im, retboth=True)
                     pred = self.model.predict(imgX)
 
                     pred = moil.convertImageNetOutput(pred)
@@ -129,7 +137,8 @@ class Models:
 
                     x = [im, pred, img]
                     if os.path.exists(os.path.join(true_path, imp)):
-                        true = self.read_func(name=imp, extension='', path=true_path, target_size=(self.colDim, self.rowDim))
+                        true = self.read_func(name=imp, extension='', path=true_path,
+                                              target_size=(self.colDim, self.rowDim))
 
                         true = true.reshape((self.rowDim, self.colDim, self.out_channels))
                         x.append(true)
@@ -160,15 +169,17 @@ class Models:
                 globals = met.globals(confusion_matrix)
                 print("Global Jaccard: " + str(globals[0]) + ", Global Dice: " + str(globals[1]))
             print("Times: " + str(times) + ", sums: " + strgSum + "Average metrics: " + strgAvgs)
-            self.validate_to_csv(metrics, avgs+globals)
-        return avgs+globals
+            self.validate_to_csv(metrics, avgs + globals, validName)
+        return avgs + globals
 
-    def validate_to_csv(self, metrics, values):
+    def validate_to_csv(self, metrics, values, name=''):
         path = self.path.split('/')[:-1]
-        path='/'.join(path)
-        epoch = (self.var_file(True)%100)*100
-        epoch = epoch + int(self.var_file(True)/100)*100
-        mocl.writeToCsv(path+'/scores.csv', ['name']+metrics, [self.path.split('/')[-1]+'_'+str(epoch)]+values)
+        path = '/'.join(path)
+        epoch = (self.var_file(True) % 100) * 100
+        epoch = epoch + int(self.var_file(True) / 100) * 100
+        mocl.writeToCsv(path + '/scores' + name + '.csv', ['name'] + metrics,
+                        [self.path.split('/')[-1] + '_' + str(epoch)] + values)
+
     def check_performance(self, validate_generator, times=1, metrics=['distance', 'youden', 'jaccard', 'dice']):
         for i in range(times):
             pic = validate_generator.next()
@@ -189,7 +200,7 @@ class Models:
             if self.show_function != None:
                 self.show_function(x)
 
-    def var_file(self, read=False, increase = 1):
+    def var_file(self, read=False, increase=1):
         if self.constantVar is not None:
             return self.constantVar
         numb = -1
@@ -205,7 +216,7 @@ class Models:
         if read:
             return numb
         if numb < 0:
-            numb =0
+            numb = 0
         else:
             numb += increase
         fo = open(self.var_filename, "w")
@@ -220,14 +231,17 @@ class Models:
         except:
             return None
 
-    def plot_loss(self, epoch=None):
+    def plot_loss(self, epoch=None, start_ep = 0):
         b = None
         if epoch is None:
             epoch = self.var_file(read=True)
         b = self.load_loss(epoch)
         if b is None:
             return
-        plt.plot(list(range(epoch+1-len(b), epoch + 1)), b, label="loss")
+        b=b[start_ep:]
+        plt.plot(list(range(epoch + 1 - len(b), epoch + 1)), b, label=self.path.split('/')[-1][10:])
+        plt.title("Entropia krzyżowa")
+        plt.text(x=200+start_ep, y=0.0114, s='Ilość epok', fontdict={'size': 10})
         plt.legend()
         plt.show()
 
@@ -333,7 +347,7 @@ class Callbacks(keras.callbacks.Callback):
         self.losses.append(logs.get('loss'))
         if self.save_modulo_epochs is not None:
             if (epoch + 1) % self.save_modulo_epochs == 0:
-                self.ModelClass.save_weights()
+                self.ModelClass.save_weights(increase=self.save_modulo_epochs)
                 if self.collectLoss:
                     with open(self.ModelClass.path + '_losses_' + str(len(self.losses)), 'wb') as handle:
                         pickle.dump(self.losses, handle)

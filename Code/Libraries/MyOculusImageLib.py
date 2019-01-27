@@ -161,16 +161,18 @@ def modify_h_div_w(img, h_div_w, modify_height=False, not_modified_dim_wanted_va
 def addToRegionOfInterest(image, x, y, HalfWidth, HalfHeight, Add):
     w, h, c = getWidthHeightChannels(image)
     shapeLen = len(np.shape(image))
-
+    wAdd, hAdd, cAdd = getWidthHeightChannels(Add)
     if shapeLen == 2:
         template = np.zeros(shape=(h + 2 * HalfHeight, w + 2 * HalfWidth), dtype=image.dtype)
         template[HalfHeight:HalfHeight + h, HalfWidth:HalfWidth + w] = image
-        template[y:y + 2 * HalfHeight, x:x + 2 * HalfWidth] = Add
+
+        template[y:y + hAdd, x:x + wAdd] = Add
 
     else:
         template = np.zeros(shape=(h + 2 * HalfHeight, w + 2 * HalfWidth, c), dtype=image.dtype)
         template[HalfHeight:HalfHeight + h, HalfWidth:HalfWidth + w, :] = image
-        template[y:y + 2 * HalfHeight, x:x + 2 * HalfWidth, :] = Add
+
+        template[y:y + hAdd, x:x + wAdd, :] = Add
 
     return template[HalfHeight:HalfHeight + h, HalfWidth:HalfWidth + w]
 

@@ -2,39 +2,58 @@ import matplotlib.pyplot as plt
 
 import Code.Libraries.MyOculusCsvLib as mocl
 import numpy as np
-scores = mocl.getScoresList("../../weights/scores.csv")
+
 
 
 def visualizePlot(scoreIndex):
+    scores = mocl.getScoresList("../../weights/scoresSAB700.csv")
     names = []
 
     data = []
+    base_name = scores[0][0][10:16]
     for score in scores:
         if score[0][10:] not in names:
             data.append([float(x) for x in score[1:]])
-            names.append(score[0][10:])
+            names.append(score[0][17:-2])
+    l = (sorted(zip(names, data), key=lambda pair: pair[0]))
 
-    data = [y for _, y in (sorted(zip(names, data), key=lambda pair: int(pair[0][-3:])))]
+    names, data = [list(t) for t in zip(*l)]
+    #names, data = [y for x, y in (sorted(zip(names, data), key=lambda pair: pair[0]))]
     data = [['%.3f' % j for j in i] for i in data]
 
-    chunks = 3
+    chunks = 11
     data = [data[i:i + chunks] for i in range(0, len(data), chunks)]
 
     names = [names[i:i + chunks] for i in range(0, len(names), chunks)]
-
+    color = ['b', 'm', 'g', 'r']
     for i in range(len(data)):
-        temp = []
+        print(i)
         name = names[i][0]
-        for j in range(len(data[i])):
-            temp.append(float(data[i][j][scoreIndex]))
-        l = list(np.arange(chunks) * 200 + 300)
-        plt.plot(l, temp)
+        if name == '':
+            name = base_name
+        named = False
+        for k in scoreIndex:
+            temp = []
+            for j in range(len(data[i])):
+                if j == 0:
+                    continue
+                temp.append(float(data[i][j][k]))
+            l = list(np.arange(chunks-1) * 100+100)
+            if not named:
+                plt.plot(l, temp, label=name, color=color[i])
+                named = True
+            else:
+                plt.plot(l, temp, color=color[i])
+    plt.legend()
+    plt.title("Średni dystans od środka tarczy")
+    plt.text(x=480, y=1.3, s='Ilość epok', fontdict={'size': 10})
     plt.show()
 
 
 
 
 def visualizeTable(columns=['Dystans', 'Youden', 'Jaccard', 'Dice']):
+    scores = mocl.getScoresList("../../weights/scores.csv")
     names = []
 
     data = []
@@ -79,6 +98,7 @@ def visualizeTable(columns=['Dystans', 'Youden', 'Jaccard', 'Dice']):
 
 
 def visualizeBar(scoreIndex, title):
+    scores = mocl.getScoresList("../../weights/scores.csv")
     vals = []
     names = []
     for score in scores:
@@ -101,4 +121,4 @@ def visualizeBar(scoreIndex, title):
 if __name__ == "__main__":
     # visualizeBar(1, "Średni dystans od środka tarczy")
     # visualizeTable()
-    visualizePlot(0)
+    visualizePlot([0])
