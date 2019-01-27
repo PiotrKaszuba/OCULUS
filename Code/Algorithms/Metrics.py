@@ -53,7 +53,7 @@ def getCenter(pred, widthRef, heightRef, morph_iter=0, threshold=127):
 
 # seeks for main circle area and returns centerDiff metric for this circle
 def centerDiff(pred, true=None, x=None, y=None, width=None, height=None, r=None, morph_iter=0, threshold=127,
-               toDraw=None):
+               toDraw=None, retDist=False):
     assert true is not None or (
             x is not None and y is not None and width is not None and height is not None and r is not None)
 
@@ -99,6 +99,10 @@ def centerDiff(pred, true=None, x=None, y=None, width=None, height=None, r=None,
     cy = cy * h_scale
 
     dist = np.linalg.norm(np.asarray([cx, cy]) - np.asarray([x, y]))
+
+    if retDist:
+        return dist
+
     maxDist = np.linalg.norm(np.asarray([w / 2, h / 2]) - np.asarray([x, y]))
 
     DistanceMetric = 1 - dist / maxDist
@@ -159,7 +163,7 @@ def binaryDiff(pred, true, threshold=127, globalCount=False):
 
     Accuracy = (TP + TN) / (Positives + Negatives)
     Jouden = Sensitivity + Specifity - 1
-    print("Jouden Index: " + str(Jouden) + ", Sensivity: " + str(Sensitivity) + ", Specifity: " + str(
+    print("Youden Index: " + str(Jouden) + ", Sensivity: " + str(Sensitivity) + ", Specifity: " + str(
         Specifity) + ", Accuracy: " + str(Accuracy) )
     if globalCount:
         return [TP, FN, FP, TN]
@@ -179,7 +183,7 @@ def globals(confusion_matrix):
     return [pseudo_jaccard, pseudo_dice]
 
 
-def customMetric(pred, true, toDraw=None, metrics=['distance', 'jouden', 'jaccard', 'dice'], globalCount=False, threshold = 127):
+def customMetric(pred, true, toDraw=None, metrics=['distance', 'youden', 'jaccard', 'dice'], globalCount=False, threshold = 127):
     ret = []
     glob = [0]*4
     if globalCount:
@@ -188,9 +192,9 @@ def customMetric(pred, true, toDraw=None, metrics=['distance', 'jouden', 'jaccar
         print("Predicted Atrophy rate: " +str(atrophyRate(pred, threshold=threshold)))
         print("True Atrophy rate: " + str(atrophyRate(true, threshold=threshold)))
     if 'distance' in metrics:
-        Distance = centerDiff(pred, true, threshold=threshold, toDraw=toDraw)
+        Distance = centerDiff(pred, true, threshold=threshold, toDraw=toDraw, retDist=True)
         ret.append(Distance)
-    if 'jouden' in metrics:
+    if 'youden' in metrics:
         Jouden = binaryDiff(pred, true, threshold=threshold)
         ret.append(Jouden)
     if 'jaccard' in metrics:
@@ -202,8 +206,8 @@ def customMetric(pred, true, toDraw=None, metrics=['distance', 'jouden', 'jaccar
     print("-------------------------")
     if 'distance' in metrics:
         print("Distance Improvement: " + str(Distance))
-    if 'jouden' in metrics:
-        print("Jouden Index: " + str(Jouden))
+    if 'youden' in metrics:
+        print("Youden Index: " + str(Jouden))
     if 'jaccard' in metrics:
         print("Jaccard Index: " + str(jaccard))
     if 'dice' in metrics:

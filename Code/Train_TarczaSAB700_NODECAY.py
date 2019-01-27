@@ -12,7 +12,7 @@ from Code.Algorithms import Models as md
 from Code.Libraries import MyOculusImageLib as moil
 from Code.Libraries import MyOculusRepoNav as morn
 from Code.Preprocessing import DataAugmentationClasses as dac
-
+import Code.Preprocessing.MergeChannels as mc
 # params
 base_path = '../'
 image_size_level = 20
@@ -30,7 +30,7 @@ ep = 500
 steps = 10
 
 cols, rows = moil.getColsRows(level=image_size_level, base_scale=base_scale)
-gray = True
+gray = False
 
 if (gray):
     mode = 0
@@ -45,9 +45,9 @@ else:
 aug = dac.getAugmentationParams()
 
 FeatureName = "Tarcza"
-TrainModeName = FeatureName + "Gray300"
+TrainModeName = FeatureName + "SAB700_NODECAY"
 
-path = base_path + 'Images/' + TrainModeName + '/'
+path = base_path + 'Images/' + TrainModeName[:-8] + '/'
 
 class_mode = 'mask'
 
@@ -63,8 +63,8 @@ save_modulo = 100
 weights_path = "../weights/unet" + TrainModeName
 var_filename = "../weights/var" + TrainModeName + ".txt"
 validate = True
-# mer = mc.MergeChannels(True)
-validatePreprocessFunc = lambda x: x
+mer = mc.MergeChannels(True)
+validatePreprocessFunc = mer.Merge
 draw = True
 sumTimes = 100
 
@@ -72,11 +72,12 @@ check_perf_times = 0
 check_perf_times_in_loop = 0
 loop_modulo = 1
 
-learn_rate = 3e-04
-decay_rate = 4e-04
+learn_rate = 2e-04
+decay_rate = 0
 printDecay = True
 
 collectLoss = True
+Augment = True
 # setup
 f = dac.ImageDataGeneratorExtension(rotation_range=aug['rotation_range'],
                                     width_shift_range=aug['width_shift_range'],
@@ -84,14 +85,16 @@ f = dac.ImageDataGeneratorExtension(rotation_range=aug['rotation_range'],
                                     zoom_range=aug['zoom_range'],
                                     shear_range=aug['shear_range'],
                                     rescale=aug['rescale'],
-                                    fill_mode=aug['fill_mode'])
+                                    fill_mode=aug['fill_mode'],
+                                    Augment=Augment)
 train_generator = f.flow_from_directory_extension(directory=path, batch_size=batch_size, color_mode=color_mode,
                                                   class_mode=class_mode, target_size=(rows, cols))
 Mod = md.Models(rows, cols, mode=mode, channels=channels_in, show_function=show_function, read_func=read_function,
                 validate_path_provider_func=validate_path_provider_func, validate_start_path=validate_start_path,
-                weights_path=weights_path, var_filename=var_filename)
+                weights_path=weights_path, var_filename=var_filename, preprocessFunc= validatePreprocessFunc)
 
 # model creation
+
 model = Mod.get_model(filters=filters, le=learn_rate, decay=decay_rate)
 weights_loaded = False
 if load_weights:
@@ -116,5 +119,3 @@ else:
 
         if i % loop_modulo == 0:
             Mod.check_performance(train_generator, times=check_perf_times_in_loop)
-
-

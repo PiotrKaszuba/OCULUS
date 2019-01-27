@@ -26,7 +26,7 @@ if withMetricOrNo == 2:
     onlyWithoutMetric = True
 batch_size = 32
 total_ep = 1
-ep = 500
+ep = 1000
 steps = 10
 
 cols, rows = moil.getColsRows(level=image_size_level, base_scale=base_scale)
@@ -62,18 +62,18 @@ load_weights = True
 save_modulo = 100
 weights_path = "../weights/unet" + TrainModeName
 var_filename = "../weights/var" + TrainModeName + ".txt"
-validate = True
+validate = False
 mer = mc.MergeChannels(True)
 validatePreprocessFunc = mer.Merge
 draw = True
-sumTimes = None
+sumTimes = 100
 
 check_perf_times = 0
 check_perf_times_in_loop = 0
 loop_modulo = 1
 
-learn_rate = 2e-04
-decay_rate = 0
+learn_rate = 3e-04
+decay_rate = 4e-04
 printDecay = True
 
 collectLoss = True

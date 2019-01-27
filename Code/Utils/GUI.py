@@ -9,7 +9,7 @@ import Code.Algorithms.Metrics as met
 import Code.Libraries.MyOculusImageLib as moil
 import Code.Preprocessing.MergeChannels as mc
 import Code.Utils.CreateModel as cm
-
+import Code.Libraries.MyOculusCsvLib as mocl
 
 class GUI:
     def prepareGui(self):
@@ -28,6 +28,7 @@ class GUI:
         tkinter.Button(self.root, width=30, text="Załaduj zdjęcie", command=self.callback).pack()
         tkinter.Button(self.root, width=30, text="Oceń zdjęcie", command=self.make_prediction).pack()
         tkinter.Button(self.root, width=30, text="Oryginał", command=self.show_original).pack()
+        tkinter.Button(self.root, width=30, text="Zapisz do CSV", command=self.save_to_csv).pack()
         self.root.resizable(False, False)
 
     def show_original(self):
@@ -36,12 +37,26 @@ class GUI:
     def __init__(self):
         self.width = 600
         self.height = 450
-        self.mer = mc.MergeChannels(equalize=True)
+        self.path = None
+        self.predicted = False
+        self.x = -1
+        self.y = -1
+        self.atrophyRate = -1
+        self.xOut = -1
+        self.yOut = -1
         self.loadModels()
         self.prepareGui()
         self.root.mainloop()
 
+
+    def save_to_csv(self):
+        if self.path is None:
+            return
+        if self.predicted == False:
+            return
+        mocl.writeToCsv("output.csv", mocl.getOutputHeader(), [self.path, self.x, self.y, self.xOut, self.yOut, self.atrophyRate])
     def loadModels(self):
+        self.mer = mc.MergeChannels(equalize=True)
         self.Mod = cm.createOpticDiscModel("SAB700", gray=False, preprocessFunc=self.mer.Merge)
         self.Mod.model.predict(
             np.zeros(shape=(1, self.Mod.rowDim, self.Mod.colDim, self.Mod.channels), dtype=np.float32))
@@ -76,6 +91,8 @@ class GUI:
 
     def make_prediction(self):
         x, y, pred = self.OpticDiscPrediction()
+        self.x = x
+        self.y = y
         copy = self.currentImg.copy()
         drawCopy = self.currentImg.copy()
         drawCopy = moil.stackImageChannels(drawCopy)
@@ -85,6 +102,7 @@ class GUI:
         roi = moil.getRegionOfInterest(copy, x, y, xShift, yShift)
 
         atrophyRate, atrophyMap = self.AtrophyPrediction(roi)
+        self.atrophyRate = atrophyRate
         self.label.configure(text="Stopień zaniku (tylko faza tętniczo-żylna): " + str(atrophyRate))
         wA, hA, cA = moil.getWidthHeightChannels(atrophyMap)
 
@@ -103,6 +121,7 @@ class GUI:
         cv2.circle(drawCopy, (x, y), int(12 / 1387 * w), (127, 0, 127), thickness=int(5 / 1387 * w))
         met.draw(pred, drawCopy, thickness=int(4 / 1387 * w))
         self.updateGuiImage(drawCopy)
+        self.predicted = True
 
     def updateGuiImage(self, img):
         img = cv2.resize(img, (self.width, self.height))
@@ -120,6 +139,13 @@ class GUI:
             return
         img = moil.read_and_size(name='', path=filename, extension='')
         self.currentImg = img
+        self.x = -1
+        self.y = -1
+        self.atrophyRate = -1
+        self.xOut = -1
+        self.yOut = -1
+        self.predicted = False
+        self.path = filename
         self.label.configure(text="Stopień zaniku (tylko faza tętniczo-żylna): ")
         self.updateGuiImage(img)
 

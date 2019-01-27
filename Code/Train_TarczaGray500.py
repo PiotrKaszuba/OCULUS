@@ -68,7 +68,7 @@ validatePreprocessFunc = lambda x: x
 draw = True
 sumTimes = 100
 
-check_perf_times = 1
+check_perf_times = 0
 check_perf_times_in_loop = 0
 loop_modulo = 1
 

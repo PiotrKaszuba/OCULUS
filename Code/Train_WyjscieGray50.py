@@ -12,11 +12,10 @@ from Code.Algorithms import Models as md
 from Code.Libraries import MyOculusImageLib as moil
 from Code.Libraries import MyOculusRepoNav as morn
 from Code.Preprocessing import DataAugmentationClasses as dac
-
 # params
 base_path = '../'
-image_size_level = 20
-base_scale = 0.75
+image_size_level = 5
+base_scale = 1.0
 withMetricOrNo = 1
 onlyWithMetric = False
 onlyWithoutMetric = False
@@ -42,10 +41,10 @@ else:
     color_mode = 'rgb'
 
 # data augmentation
-aug = dac.getAugmentationParams()
+aug = dac.getAugmentationParamsZanik()
 
-FeatureName = "Tarcza"
-TrainModeName = FeatureName + "Gray300"
+FeatureName = "Wyjscie"
+TrainModeName = FeatureName + "Gray50"
 
 path = base_path + 'Images/' + TrainModeName + '/'
 
@@ -55,25 +54,26 @@ class_mode = 'mask'
 show_function = md.Models.model_show_function
 read_function = moil.read_and_size
 validate_path_provider_func = morn.next_path
-validate_start_path = base_path + 'Images/' + FeatureName + 'Validate/'
-filters = 12
+validate_start_path = base_path+'Images/'+FeatureName+'Validate/'
+filters = 10
 
 load_weights = True
 save_modulo = 100
 weights_path = "../weights/unet" + TrainModeName
 var_filename = "../weights/var" + TrainModeName + ".txt"
 validate = True
+metrics = ["jouden", "global", 'atrophy']
 # mer = mc.MergeChannels(True)
 validatePreprocessFunc = lambda x: x
-draw = True
-sumTimes = 100
+draw = False
+sumTimes = None
 
-check_perf_times = 0
+check_perf_times = 3
 check_perf_times_in_loop = 0
 loop_modulo = 1
 
 learn_rate = 3e-04
-decay_rate = 4e-04
+decay_rate = 5e-04
 printDecay = True
 
 collectLoss = True
@@ -98,15 +98,14 @@ if load_weights:
     weights_loaded = Mod.load_weights()
 if not weights_loaded:
     Mod.save_weights()
-Mod.plot_loss(500)
+
 Mod.check_performance(train_generator, times=check_perf_times)
 
 callbacks = md.Callbacks(ModelClass=Mod, save_modulo_epochs=save_modulo, printDecay=printDecay, collectLoss=collectLoss)
-
 # go
 if validate:
     Mod.validate(validateMode=mode, preprocessFunc=validatePreprocessFunc, draw=draw, onlyWithMetric=onlyWithMetric,
-                 onlyWithoutMetric=onlyWithoutMetric, sumTimes=sumTimes)
+                 onlyWithoutMetric=onlyWithoutMetric, sumTimes=sumTimes, metrics=metrics)
 else:
     for loop in range(total_ep):
         i = loop + 1
@@ -116,5 +115,3 @@ else:
 
         if i % loop_modulo == 0:
             Mod.check_performance(train_generator, times=check_perf_times_in_loop)
-
-

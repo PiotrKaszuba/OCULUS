@@ -11,7 +11,7 @@ from matplotlib import pyplot as plt
 
 import Code.Algorithms.Metrics as met
 import Code.Libraries.MyOculusImageLib as moil
-
+import Code.Libraries.MyOculusCsvLib as mocl
 
 class Models:
 
@@ -24,8 +24,9 @@ class Models:
 
     def __init__(self, rowDim, colDim, mode=0, channels=1, out_channels=1, modify_col=False, row_div_col=0,
                  weights_path="../weights/unet", var_filename="../weights/var.txt", show_function=None, read_func=None,
-                 validate_path_provider_func=None, validate_start_path=None, preprocessFunc = lambda x:x):
+                 validate_path_provider_func=None, validate_start_path=None, preprocessFunc = lambda x:x, constantVar = None):
         self.model = None
+        self.constantVar = constantVar
         self.path = weights_path
         self.var_filename = var_filename
         self.rowDim = int(rowDim)
@@ -81,7 +82,7 @@ class Models:
     def readImage(self, name, path, extension=".jpg"):
         return self.read_func(name=name, extension=extension, path=path, target_size=(self.colDim, self.rowDim), mode=0)
     def validate(self, pathForce=None, validateMode=0, preprocessFunc=lambda x: x, draw=True, onlyWithMetric=False,
-                 onlyWithoutMetric=False, sumTimes=None, metrics=['distance', 'jouden', 'jaccard', 'dice']):
+                 onlyWithoutMetric=False, sumTimes=None, metrics=['distance', 'youden', 'jaccard', 'dice']):
         sum = [0]*len(metrics)
         confusion_matrix=[0]*4
         globalCount = False
@@ -154,9 +155,16 @@ class Models:
             globals = met.globals(confusion_matrix)
             print("Global Jaccard: " + str(globals[0]) + ", Global Dice: " + str(globals[1]))
         print("Times: " + str(times) + ", sums: " + strgSum + "Average metrics: " + strgAvgs)
+        self.validate_to_csv(metrics, avgs+globals)
         return avgs+globals
 
-    def check_performance(self, validate_generator, times=1, metrics=['distance', 'jouden', 'jaccard', 'dice']):
+    def validate_to_csv(self, metrics, values):
+        path = self.path.split('/')[:-1]
+        path='/'.join(path)
+        epoch = (self.var_file(True)%100)*100
+        epoch = epoch + int(self.var_file(True)/100)*100
+        mocl.writeToCsv(path+'/scores.csv', ['name']+metrics, [self.path.split('/')[-1]+'_'+str(epoch)]+values)
+    def check_performance(self, validate_generator, times=1, metrics=['distance', 'youden', 'jaccard', 'dice']):
         for i in range(times):
             pic = validate_generator.next()
 
@@ -177,6 +185,8 @@ class Models:
                 self.show_function(x)
 
     def var_file(self, read=False, increase = 1):
+        if self.constantVar is not None:
+            return self.constantVar
         numb = -1
         if not os.path.isfile(self.var_filename):
             fo = open(self.var_filename, "w")

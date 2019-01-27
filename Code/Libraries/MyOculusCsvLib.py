@@ -5,6 +5,9 @@ import Code.Libraries.MyOculusImageLib as moil
 import Code.Libraries.MyOculusRepoNav as morn
 
 
+def getOutputHeader():
+    return ['sciezka', 'x', 'y', 'xOut', 'yOut', 'zanik']
+
 def getMaskHeader():
     return ['patient', 'date', 'eye', 'name', 'width', 'height', 'x', 'y', 'r']
 
@@ -32,6 +35,14 @@ def registerImageCsv(repo_path, image_path, image_name, image, function):
     writeToCsv(repo_path + "imageData.csv", header, row)
 
 
+def getScoresList(path):
+    list = []
+    with open(path, 'r') as f:
+        reader = csv.reader(f)
+        next(reader, None)
+        for row in reader:
+            list.append(row)
+    return list
 def getCsvList(repo_path, image=True, name=None):
     list = []
     if name is None:
