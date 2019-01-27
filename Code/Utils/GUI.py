@@ -6,10 +6,11 @@ import numpy as np
 from PIL import Image, ImageTk
 
 import Code.Algorithms.Metrics as met
+import Code.Libraries.MyOculusCsvLib as mocl
 import Code.Libraries.MyOculusImageLib as moil
 import Code.Preprocessing.MergeChannels as mc
 import Code.Utils.CreateModel as cm
-import Code.Libraries.MyOculusCsvLib as mocl
+#import easygui
 
 class GUI:
     def prepareGui(self):
@@ -48,13 +49,14 @@ class GUI:
         self.prepareGui()
         self.root.mainloop()
 
-
     def save_to_csv(self):
         if self.path is None:
             return
         if self.predicted == False:
             return
-        mocl.writeToCsv("output.csv", mocl.getOutputHeader(), [self.path, self.x, self.y, self.xOut, self.yOut, self.atrophyRate])
+        mocl.writeToCsv("output.csv", mocl.getOutputHeader(),
+                        [self.path, self.x, self.y, self.xOut, self.yOut, self.atrophyRate])
+
     def loadModels(self):
         self.mer = mc.MergeChannels(equalize=True)
         self.Mod = cm.createOpticDiscModel("SAB700", gray=False, preprocessFunc=self.mer.Merge)
@@ -64,6 +66,9 @@ class GUI:
         self.ModAtrophy.model.predict(
             np.zeros(shape=(1, self.ModAtrophy.rowDim, self.ModAtrophy.colDim, self.ModAtrophy.channels),
                      dtype=np.float32))
+        self.ModExit = cm.createExitModel("Gray50")
+        self.ModExit.model.predict(
+            np.zeros(shape=(1, self.ModExit.rowDim, self.ModExit.colDim, self.ModExit.channels), dtype=np.float32))
 
     def OpticDiscPrediction(self):
         img = self.Mod.predict(self.currentImg)
@@ -79,6 +84,17 @@ class GUI:
         x = int(x)
         y = int(y)
         return x, y, img
+
+    def ExitPrediction(self, roi, xExitShift, yExitShift, xRef, yRef):
+
+        img = self.ModExit.predict(roi)
+
+        img = cv2.resize(img, (xExitShift * 2, yExitShift * 2))
+
+        x, y = met.getCenter(img, xExitShift * 2, yExitShift * 2)
+        x = int(x)
+        y = int(y)
+        return x + xRef - xExitShift, y + yRef - yExitShift
 
     def AtrophyPrediction(self, roi):
         img = self.ModAtrophy.predict(roi)
@@ -99,11 +115,17 @@ class GUI:
         w, h, c = moil.getWidthHeightChannels(copy)
         xShift = int(80 * w / 600)
         yShift = int(80 * (w * 0.75) / 450)
-        roi = moil.getRegionOfInterest(copy, x, y, xShift, yShift)
 
+        xExitShift = int(40 * w / 600)
+        yExitShift = int(40 * (w * 0.75) / 450)
+        roi = moil.getRegionOfInterest(copy, x, y, xShift, yShift)
+        roiExit = moil.getRegionOfInterest(copy, x, y, xExitShift, yExitShift)
         atrophyRate, atrophyMap = self.AtrophyPrediction(roi)
         self.atrophyRate = atrophyRate
         self.label.configure(text="Stopień zaniku (tylko faza tętniczo-żylna): " + str(atrophyRate))
+
+        xExit, yExit = self.ExitPrediction(roiExit, xExitShift, yExitShift, x, y)
+
         wA, hA, cA = moil.getWidthHeightChannels(atrophyMap)
 
         mask = np.zeros((h, w), drawCopy.dtype)
@@ -117,9 +139,11 @@ class GUI:
 
         # moil.show(atrophyMap)
         # drawCopy[mask] = (255, 0, 0)
-        cv2.rectangle(drawCopy, (x-xShift, y-yShift) , (x+xShift, y+yShift), (127,0,127), int(5/1387*w))
+        cv2.rectangle(drawCopy, (x - xShift, y - yShift), (x + xShift, y + yShift), (127, 0, 127), int(5 / 1387 * w))
         cv2.circle(drawCopy, (x, y), int(12 / 1387 * w), (127, 0, 127), thickness=int(5 / 1387 * w))
+
         met.draw(pred, drawCopy, thickness=int(4 / 1387 * w))
+        cv2.circle(drawCopy, (xExit, yExit), int(12 / 1387 * w), (0, 127, 0), thickness=int(5 / 1387 * w))
         self.updateGuiImage(drawCopy)
         self.predicted = True
 
@@ -132,9 +156,12 @@ class GUI:
         self.image.image = imgtk
 
     def callback(self):
-        filename = filedialog.askopenfilename(title="Select file",
-                                              filetypes=(("all files", "*.*"), ("jpeg files", "*.jpg")))
 
+        filename = filedialog.askopenfilename(title="Select file",
+                                          filetypes=(("all files", "*.*"), ("jpeg files", "*.jpg")))
+
+        #filename = easygui.fileopenbox()
+        self.root.update()
         if filename == '':
             return
         img = moil.read_and_size(name='', path=filename, extension='')

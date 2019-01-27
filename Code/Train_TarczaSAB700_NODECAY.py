@@ -94,14 +94,14 @@ Mod = md.Models(rows, cols, mode=mode, channels=channels_in, show_function=show_
                 weights_path=weights_path, var_filename=var_filename, preprocessFunc= validatePreprocessFunc)
 
 # model creation
-
+Mod.plot_loss(1000)
 model = Mod.get_model(filters=filters, le=learn_rate, decay=decay_rate)
 weights_loaded = False
 if load_weights:
     weights_loaded = Mod.load_weights()
 if not weights_loaded:
     Mod.save_weights()
-Mod.plot_loss(500)
+
 Mod.check_performance(train_generator, times=check_perf_times)
 
 callbacks = md.Callbacks(ModelClass=Mod, save_modulo_epochs=save_modulo, printDecay=printDecay, collectLoss=collectLoss)

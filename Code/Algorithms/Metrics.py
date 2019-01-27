@@ -174,13 +174,15 @@ def globals(confusion_matrix):
     try:
         precision = TP / (TP + FP)
         Sensitivity = TP /(TP + FN)
+        Specificity = TN / (TN + FP)
+        Youden = Sensitivity + Specificity - 1
         pseudo_dice = 2*precision*Sensitivity/(precision+Sensitivity)
         pseudo_jaccard = precision * Sensitivity / ((precision + Sensitivity) - (precision * Sensitivity))
     except:
         pseudo_dice = -100
         pseudo_jaccard = -100
 
-    return [pseudo_jaccard, pseudo_dice]
+    return [Youden, pseudo_jaccard, pseudo_dice]
 
 
 def customMetric(pred, true, toDraw=None, metrics=['distance', 'youden', 'jaccard', 'dice'], globalCount=False, threshold = 127):

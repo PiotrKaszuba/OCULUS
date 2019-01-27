@@ -82,80 +82,85 @@ class Models:
     def readImage(self, name, path, extension=".jpg"):
         return self.read_func(name=name, extension=extension, path=path, target_size=(self.colDim, self.rowDim), mode=0)
     def validate(self, pathForce=None, validateMode=0, preprocessFunc=lambda x: x, draw=True, onlyWithMetric=False,
-                 onlyWithoutMetric=False, sumTimes=None, metrics=['distance', 'youden', 'jaccard', 'dice']):
-        sum = [0]*len(metrics)
-        confusion_matrix=[0]*4
-        globalCount = False
-        for metr in metrics:
-            if 'global' in metr:
-                globalCount = True
-        times = 0
-        visited_path = {}
-        while True:
-            if pathForce is None:
-                path = self.validate_path_provider_func(self.validate_start_path, visited_path)
-                visited_path[path] = times
+                 onlyWithoutMetric=False, sumTimes=None, metrics=['distance', 'youden', 'jaccard', 'dice'], validTimes=1, weightsTimesValids=None):
+        avgs, globals = (0, 0)
+        for i in range(validTimes):
+            if weightsTimesValids is not None:
+                self.constantVar = i * weightsTimesValids
+                self.load_weights()
+            sum = [0]*len(metrics)
+            confusion_matrix=[0]*4
+            globalCount = False
+            for metr in metrics:
+                if 'global' in metr:
+                    globalCount = True
+            times = 0
+            visited_path = {}
+            while True:
+                if pathForce is None:
+                    path = self.validate_path_provider_func(self.validate_start_path, visited_path)
+                    visited_path[path] = times
 
-            else:
-                path = pathForce
-            if path is None:
-                break
-            if not os.path.exists(path):
-                continue
-            images = os.listdir(path)
-            for imp in images:  # len(os.listdir(path)) - 2):
-
-                true_path = path + 'mask/'
-                if not os.path.exists(os.path.join(path, imp)):
-                    continue
-                if onlyWithMetric and not os.path.exists(os.path.join(true_path, imp)):
-                    continue
                 else:
-                    if onlyWithoutMetric and os.path.exists(os.path.join(true_path, imp)):
+                    path = pathForce
+                if path is None:
+                    break
+                if not os.path.exists(path):
+                    continue
+                images = os.listdir(path)
+                for imp in images:  # len(os.listdir(path)) - 2):
+
+                    true_path = path + 'mask/'
+                    if not os.path.exists(os.path.join(path, imp)):
                         continue
+                    if onlyWithMetric and not os.path.exists(os.path.join(true_path, imp)):
+                        continue
+                    else:
+                        if onlyWithoutMetric and os.path.exists(os.path.join(true_path, imp)):
+                            continue
 
-                im = self.read_func(name=imp, extension='', path=path, target_size=(self.colDim, self.rowDim), mode=0)
-                imgX, img = self.prepareImage(im,  retboth=True)
-                pred = self.model.predict(imgX)
+                    im = self.read_func(name=imp, extension='', path=path, target_size=(self.colDim, self.rowDim), mode=0)
+                    imgX, img = self.prepareImage(im,  retboth=True)
+                    pred = self.model.predict(imgX)
 
-                pred = moil.convertImageNetOutput(pred)
+                    pred = moil.convertImageNetOutput(pred)
 
-                toDraw = im if draw else None
+                    toDraw = im if draw else None
 
-                x = [im, pred, img]
-                if os.path.exists(os.path.join(true_path, imp)):
-                    true = self.read_func(name=imp, extension='', path=true_path, target_size=(self.colDim, self.rowDim))
+                    x = [im, pred, img]
+                    if os.path.exists(os.path.join(true_path, imp)):
+                        true = self.read_func(name=imp, extension='', path=true_path, target_size=(self.colDim, self.rowDim))
 
-                    true = true.reshape((self.rowDim, self.colDim, self.out_channels))
-                    x.append(true)
-                    results = met.customMetric(pred, true, toDraw=toDraw, metrics=metrics, globalCount=globalCount)
-                    sum = list(map(add, sum, results[0]))
+                        true = true.reshape((self.rowDim, self.colDim, self.out_channels))
+                        x.append(true)
+                        results = met.customMetric(pred, true, toDraw=toDraw, metrics=metrics, globalCount=globalCount)
+                        sum = list(map(add, sum, results[0]))
 
-                    confusion_matrix = list(map(add, confusion_matrix, results[1]))
+                        confusion_matrix = list(map(add, confusion_matrix, results[1]))
 
-                    times += 1
-                    if sumTimes is not None and times >= sumTimes:
-                        break
-                else:
-                    met.draw(pred, toDraw)
+                        times += 1
+                        if sumTimes is not None and times >= sumTimes:
+                            break
+                    else:
+                        met.draw(pred, toDraw)
 
-                if sumTimes is None:
-                    self.show_function(x)
+                    if sumTimes is None:
+                        self.show_function(x)
 
-        avgs = [x / times for x in sum]
-        strgSum = ''
-        strgAvgs = ''
-        for val in sum:
-            strgSum += str(val) + ', '
-        for val in avgs:
-            strgAvgs += str(val) + ', '
+            avgs = [x / times for x in sum]
+            strgSum = ''
+            strgAvgs = ''
+            for val in sum:
+                strgSum += str(val) + ', '
+            for val in avgs:
+                strgAvgs += str(val) + ', '
 
-        globals = []
-        if globalCount:
-            globals = met.globals(confusion_matrix)
-            print("Global Jaccard: " + str(globals[0]) + ", Global Dice: " + str(globals[1]))
-        print("Times: " + str(times) + ", sums: " + strgSum + "Average metrics: " + strgAvgs)
-        self.validate_to_csv(metrics, avgs+globals)
+            globals = []
+            if globalCount:
+                globals = met.globals(confusion_matrix)
+                print("Global Jaccard: " + str(globals[0]) + ", Global Dice: " + str(globals[1]))
+            print("Times: " + str(times) + ", sums: " + strgSum + "Average metrics: " + strgAvgs)
+            self.validate_to_csv(metrics, avgs+globals)
         return avgs+globals
 
     def validate_to_csv(self, metrics, values):
@@ -222,7 +227,7 @@ class Models:
         b = self.load_loss(epoch)
         if b is None:
             return
-        plt.plot(list(range(1, epoch + 1)), b, label="loss")
+        plt.plot(list(range(epoch+1-len(b), epoch + 1)), b, label="loss")
         plt.legend()
         plt.show()
 
