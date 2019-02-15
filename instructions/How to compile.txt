@@ -1,0 +1,14 @@
+1. Create and install packages for compile environment.
+2. Add hook-pywt.py to: <compile_env_directory>\Lib\site-packages\PyInstaller\hooks.
+3. Using compile environment, use PyInstaller : pyinstaller <module_name>.py.
+4. Output application should be ready in <path>\dist\<module_name>\.
+5. Copy weights folder (from compileStructure dir) to <path>\dist\<module_name>\.
+6. Application executable is <path>\dist\<module_name>\<module_name>.exe.
+
+
+Creating / using virtual env inside this Flask tutorial:
+https://blog.miguelgrinberg.com/post/the-flask-mega-tutorial-part-i-hello-world
+
+
+PyInstaller additional file explanation:
+https://stackoverflow.com/questions/41998403/pyinstaller-importerror-on-pywt-ctw-module
