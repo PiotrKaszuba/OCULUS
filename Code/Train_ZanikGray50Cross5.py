@@ -61,11 +61,11 @@ load_weights = True
 save_modulo = 100
 
 validate = True
-metrics = ["global_youden", "global_jaccard", 'global_dice']
+metrics = ["youden", "global_youden", "global_jaccard", 'global_dice']
 # mer = mc.MergeChannels(True)
 validatePreprocessFunc = lambda x: x
 draw = False
-sumTimes = None
+sumTimes = 10
 
 check_perf_times = 0
 check_perf_times_in_loop = 0
@@ -119,7 +119,7 @@ for j in range(CrossTimes):
     # go
     if validate:
         results = Mod.validate(validateMode=mode, preprocessFunc=validatePreprocessFunc, draw=draw, onlyWithMetric=onlyWithMetric,
-                     onlyWithoutMetric=onlyWithoutMetric, sumTimes=sumTimes, metrics=metrics, validTimes=1, validName='Zanik', weightsTimesValids=None)
+                     onlyWithoutMetric=onlyWithoutMetric, sumTimes=sumTimes, metrics=metrics, validTimes=6, validName='Zanik', weightsTimesValids=100)
         sum = list(map(add, sum, results))
     else:
         for loop in range(total_ep):

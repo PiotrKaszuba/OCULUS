@@ -6,15 +6,15 @@ import itertools
 
 
 def visualizePlot(scoreIndex, averaging=False):
-    scores = mocl.getScoresList("../../weights/scoresZanik.csv")
+    scores = mocl.getScoresList("../../weights/scoresSAB700.csv")
     names = []
-
+    metr = ['Youden', 'Jaccard', 'Dice']
     data = []
-    base_name = scores[0][0][9:16]
+    base_name = scores[0][0][9:]
     for score in scores:
-        if score[0][9:] not in names:
+        if score[0][9:16] not in names:
             data.append([float(x) for x in score[1:]])
-            tempName = score[0][15:-2]
+            tempName = score[0][10:-2]
             #tempName = tempName[:5] + tempName[-1]
             names.append(tempName)
     l = (sorted(zip(names, data), key=lambda pair: pair[0]))
@@ -23,13 +23,13 @@ def visualizePlot(scoreIndex, averaging=False):
     #names, data = [y for x, y in (sorted(zip(names, data), key=lambda pair: pair[0]))]
     data = [['%.3f' % j for j in i] for i in data]
 
-    chunks = 6
+    chunks = 11
     data = [data[i:i + chunks] for i in range(0, len(data), chunks)]
 
     names = [names[i:i + chunks] for i in range(0, len(names), chunks)]
 
     color = ['b', 'm', 'g', 'r', 'c', 'k']
-    sums = [[0, 0, 0] for x in range(chunks)]
+    sums = [[0, 0, 0, 0] for x in range(chunks)]
 
     for i in range(len(data)):
         print(i)
@@ -46,7 +46,7 @@ def visualizePlot(scoreIndex, averaging=False):
                 sums[j][k] = sums[j][k] + float(data[i][j][k])
             l = list(np.arange(chunks-1) * 100+100)
             if not named:
-                plt.plot(l, temp, label=name, color=color[i])
+                plt.plot(l, temp, label=names[i][0], color=color[i])
                 named = True
             else:
                 plt.plot(l, temp, color=color[i])
@@ -63,20 +63,96 @@ def visualizePlot(scoreIndex, averaging=False):
             plt.plot(l, temp, label='Average', color='k')
     sums = sums[1:]
     plt.legend()
-    plt.title("Globalny indeks Youdena")
-    plt.text(x=275, y=-0.02, s='Ilość epok', fontdict={'size': 10})
+    plt.title("Dystans wykrytego środka od prawidłowego")
+    plt.text(x=475, y=1.094, s='Ilość epok', fontdict={'size': 10})
+    #plt.title("Indeks Youdena")
+    #plt.text(x=475, y=0.775, s='Ilość epok', fontdict={'size': 10})
+    #plt.title("Indeks Jaccarda")
+    #plt.text(x=475, y=0.594, s='Ilość epok', fontdict={'size': 10})
+    #plt.title("Współczynnik Dice'a")
+    #plt.text(x=475, y=0.72, s='Ilość epok', fontdict={'size': 10})
+    #plt.text(x=950, y=3.460, s='Ilość epok', fontdict={'size': 10})
 
     fig, axs = plt.subplots(2, 1)
     axs[0].axis('tight')
     axs[0].axis('off')
-    table = axs[0].table(colLabels=['G. Youden', 'G. Jaccard', 'G. Dice'], loc='center', cellText=sums, rowLabels=['100', '200', '300', '400', '500'],
-                          rowLoc='right', cellLoc='right', cellColours=[['w']*3, ['w']*3, ['g']*3 ,['w']*3 ,['w']*3], rowColours=['w', 'w', 'g', 'w', 'w']
+    #table = axs[0].table(colLabels=['Youden', 'G. Youden', 'G. Jaccard', 'G. Dice'], loc='center', cellText=sums, rowLabels=[str(x) for x in np.arange(20) * 100 +100],
+    #                      rowLoc='right', cellLoc='right', cellColours=[['w']*4]*10, rowColours=['w', 'w', 'g', 'w', 'w']*4
+    #                     )
+    #table.set_fontsize(12)
+   # table.scale(0.8, 1.4)
+    plt.show()
+
+def visualizePlot2(scoreIndex, averaging=False):
+    scores = mocl.getScoresList("../../weights/scoreswn.csv")
+    names = []
+    metr = ['Youden', 'Jaccard', 'Dice']
+    data = []
+    base_name = scores[0][0][9:16]
+    for score in scores:
+        if score[0][9:] not in names:
+            data.append([float(x) for x in score[1:]])
+            tempName = score[0][15:-5]
+            #tempName = tempName[:5] + tempName[-1]
+            names.append(tempName)
+    l = (sorted(zip(names, data), key=lambda pair: pair[0]))
+
+    names, data = [list(t) for t in zip(*l)]
+    #names, data = [y for x, y in (sorted(zip(names, data), key=lambda pair: pair[0]))]
+    data = [['%.3f' % j for j in i] for i in data]
+
+    chunks = 21
+    data = [data[i:i + chunks] for i in range(0, len(data), chunks)]
+
+    names = [names[i:i + chunks] for i in range(0, len(names), chunks)]
+
+    color = ['b', 'm', 'g', 'r', 'c', 'k']
+    sums = [[0, 0, 0, 0] for x in range(chunks)]
+
+    for i in range(len(data)):
+        print(i)
+        name = names[i][0]
+        if name == '':
+            name = base_name
+        named = False
+        for k in scoreIndex:
+            temp = []
+            for j in range(len(data[i])):
+                if j == 0:
+                    continue
+                temp.append(float(data[i][j][k]))
+                sums[j][k] = sums[j][k] + float(data[i][j][k])
+            l = list(np.arange(chunks-1) * 100+100)
+            if not named:
+                plt.plot(l, temp, label=names[i][0], color=color[k])
+                named = True
+            else:
+                plt.plot(l, temp, color=color[i])
+    if averaging:
+        for k in scoreIndex:
+            temp = []
+            for j in range(len(sums)):
+                if j == 0:
+                    continue
+                sums[j][k] /= len(data)
+                sums[j][k] = float('%.3f' % sums[j][k])
+                temp.append(sums[j][k])
+            l = list(np.arange(chunks - 1) * 100 + 100)
+            plt.plot(l, temp, label='Average', color='k')
+    sums = sums[1:]
+    plt.legend()
+    plt.title("Dystans wykrytego środka od prawidłowego")
+    plt.text(x=950, y=3.460, s='Ilość epok', fontdict={'size': 10})
+
+    fig, axs = plt.subplots(2, 1)
+    axs[0].axis('tight')
+    axs[0].axis('off')
+    table = axs[0].table(colLabels=['Youden', 'G. Youden', 'G. Jaccard', 'G. Dice'], loc='center', cellText=sums, rowLabels=[str(x) for x in np.arange(20) * 100 +100],
+                          rowLoc='right', cellLoc='right', cellColours=[['w']*4]*20, rowColours=['w', 'w', 'g', 'w', 'w']*4
                          )
     table.set_fontsize(12)
     table.scale(0.8, 1.4)
     plt.show()
-
-
 
 
 def visualizeTable(columns=['Dystans', 'Youden', 'Jaccard', 'Dice']):
@@ -146,6 +222,7 @@ def visualizeBar(scoreIndex, title):
 
 
 if __name__ == "__main__":
-    # visualizeBar(1, "Średni dystans od środka tarczy")
-    # visualizeTable()
-    visualizePlot([0], True)
+    #visualizeBar(1, "Dystans wykrytego środka od prawidłowego")
+    #visualizeTable()
+    visualizePlot2([0], False)
+    #visualizeTable()

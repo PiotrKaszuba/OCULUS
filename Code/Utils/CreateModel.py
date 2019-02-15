@@ -74,7 +74,7 @@ def createExitModel(ModelName, gray=True, preprocessFunc=lambda x: x):
         mode = 1
         channels_in = 3
         color_mode = 'rgb'
-    filters = 10
+    filters = 8
     weights_path = "../../weights/unet" + TrainModeName
     var_filename = "../../weights/var" + TrainModeName + ".txt"
     Mod = md.Models(rows, cols, mode=mode, channels=channels_in,

@@ -10,7 +10,9 @@ import Code.Libraries.MyOculusCsvLib as mocl
 import Code.Libraries.MyOculusImageLib as moil
 import Code.Preprocessing.MergeChannels as mc
 import Code.Utils.CreateModel as cm
-#import easygui
+
+
+# import easygui
 
 class GUI:
     def prepareGui(self):
@@ -25,7 +27,9 @@ class GUI:
         self.image.pack()
         self.image.config(height=self.height, width=self.width)
         self.label = tkinter.Label(self.root, text='Stopień zaniku (tylko faza tętniczo-żylna) : ')
+        self.labelExit = tkinter.Label(self.root, text='Przesunięcie naczyń (faza tętniczo-żylna lub późna) : ')
         self.label.pack()
+        self.labelExit.pack()
         tkinter.Button(self.root, width=30, text="Załaduj zdjęcie", command=self.callback).pack()
         tkinter.Button(self.root, width=30, text="Oceń zdjęcie", command=self.make_prediction).pack()
         tkinter.Button(self.root, width=30, text="Oryginał", command=self.show_original).pack()
@@ -43,6 +47,7 @@ class GUI:
         self.x = -1
         self.y = -1
         self.atrophyRate = -1
+        self.distance = -1
         self.xOut = -1
         self.yOut = -1
         self.loadModels()
@@ -66,7 +71,7 @@ class GUI:
         self.ModAtrophy.model.predict(
             np.zeros(shape=(1, self.ModAtrophy.rowDim, self.ModAtrophy.colDim, self.ModAtrophy.channels),
                      dtype=np.float32))
-        self.ModExit = cm.createExitModel("Gray50")
+        self.ModExit = cm.createExitModel("Gray125")
         self.ModExit.model.predict(
             np.zeros(shape=(1, self.ModExit.rowDim, self.ModExit.colDim, self.ModExit.channels), dtype=np.float32))
 
@@ -125,7 +130,16 @@ class GUI:
         self.label.configure(text="Stopień zaniku (tylko faza tętniczo-żylna): " + str(atrophyRate))
 
         xExit, yExit = self.ExitPrediction(roiExit, xExitShift, yExitShift, x, y)
-
+        self.xOut = xExit
+        self.yOut = yExit
+        dist = np.linalg.norm(
+            np.asarray([xExit / w * 600, yExit / (w * 0.75) * 450]) - np.asarray([x / w * 600, y / (w * 0.75) * 450]))
+        if dist > 16:
+            self.labelExit.configure(
+                text='Przesunięcie naczyń (faza tętniczo-żylna lub późna) : ' + str(dist) + ', ZNACZNE!')
+        else:
+            self.labelExit.configure(
+                text='Przesunięcie naczyń (faza tętniczo-żylna lub późna) : ' + str(dist))
         wA, hA, cA = moil.getWidthHeightChannels(atrophyMap)
 
         mask = np.zeros((h, w), drawCopy.dtype)
@@ -158,9 +172,9 @@ class GUI:
     def callback(self):
 
         filename = filedialog.askopenfilename(title="Select file",
-                                          filetypes=(("all files", "*.*"), ("jpeg files", "*.jpg")))
+                                              filetypes=(("all files", "*.*"), ("jpeg files", "*.jpg")))
 
-        #filename = easygui.fileopenbox()
+        # filename = easygui.fileopenbox()
         self.root.update()
         if filename == '':
             return
@@ -169,6 +183,7 @@ class GUI:
         self.x = -1
         self.y = -1
         self.atrophyRate = -1
+        self.distance = -1
         self.xOut = -1
         self.yOut = -1
         self.predicted = False

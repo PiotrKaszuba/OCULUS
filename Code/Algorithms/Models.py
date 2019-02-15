@@ -247,7 +247,7 @@ class Models:
 
     def get_model(self, filters=2, le=1e-04, decay=0):
 
-        if self.model != None:
+        if self.model is not None:
             return self.model
 
         inputs = Input((self.rowDim, self.colDim, self.channels))
